@@ -6,6 +6,7 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.feature_extraction.text import CountVectorizer
 from tmu.models.classification.vanilla_classifier import TMClassifier
+from scipy.sparse import csr_matrix
 
 from tmu.tools import BenchmarkTimer
 
@@ -63,26 +64,33 @@ def main(args):
         tokenizer=lambda s: s,
         token_pattern=None,
         ngram_range=(1, args.max_ngram),
+        max_features=100000,
         lowercase=False,
         binary=True
     )
 
-    X_train = vectorizer_X.fit_transform(training_documents)
+    X_train = vectorizer_X.fit_transform(training_documents).astype(np.uint32)
     Y_train = train_y.astype(np.uint32)
 
-    X_test = vectorizer_X.transform(testing_documents)
+    X_test = vectorizer_X.transform(testing_documents).astype(np.uint32)
     Y_test = test_y.astype(np.uint32)
     _LOGGER.info("Producing bit representation... Done!")
 
     _LOGGER.info("Selecting Features....")
 
-    SKB = SelectKBest(chi2, k=args.features)
-    SKB.fit(X_train, Y_train)
+    #SKB = SelectKBest(chi2, k=args.features)
+    #SKB.fit(X_train, Y_train)
 
-    selected_features = SKB.get_support(indices=True)
-    X_train = SKB.transform(X_train).astype(np.uint32)
-    X_test = SKB.transform(X_test).astype(np.uint32)
+    selected_features = np.arange(args.features)
+    #selected_features = SKB.get_support(indices=True)
+    #X_train = SKB.transform(X_train).astype(np.uint32)
+    #X_test = SKB.transform(X_test).astype(np.uint32)
 
+    documents = [["movie", "all"], ["very", "good"], ["love", "the", "book"]]
+    print(documents)
+    concepts = vectorizer_X.transform(documents)
+    print(concepts)
+    
     _LOGGER.info("Selecting Features.... Done!")
 
     tm = TMClassifier(
@@ -91,7 +99,8 @@ def main(args):
         args.s,
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
-        clause_drop_p=args.clause_drop_p
+        clause_drop_p=args.clause_drop_p,
+        sets=concepts#csr_matrix([[1,8],[0,1],[15,128]])
     )
 
     for e in range(args.epochs):

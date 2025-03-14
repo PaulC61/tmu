@@ -212,8 +212,8 @@ void cbse_type_i_feedback(
 			continue;
 		}
 
+        // Calculate intersection of input and included sets...
 		int clause_pos_base = j*number_of_literals*2;
-
         int clause_output = 1;
         for (int k = 0; k < clause_bank_included_length[j]; ++k) {
         	unsigned int clause_pos = clause_pos_base + k*2;
@@ -224,6 +224,10 @@ void cbse_type_i_feedback(
                 break;
             }
         }
+
+        // Clause output is 1 if pop count is > 0
+
+        // Calculate intersection with each set, which becomes the truth values for updating...
 
         if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
             // Update state of included literals
@@ -344,8 +348,7 @@ void cbse_type_i_feedback(
                     int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
                     clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
                     clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
-                }
-                
+                }  
             }
     	}
     }

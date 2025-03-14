@@ -98,6 +98,7 @@ class TMBaseModel:
             absorbing_include=None,
             absorbing_exclude=None,
             squared_weight_update_p=False,
+            sets=None,
             seed=None
     ):
         self.seed = seed
@@ -107,7 +108,8 @@ class TMBaseModel:
         self.number_of_state_bits_ind = number_of_state_bits_ind
         self.T = int(T)
         self.s = s
-
+        self.sets = sets
+        
         self.confidence_driven_updating = confidence_driven_updating
         self.type_i_ii_ratio = type_i_ii_ratio
         if type_i_ii_ratio >= 1.0:
@@ -288,6 +290,7 @@ class TMBaseModel:
         from tmu.clause_bank.clause_bank_sets import ClauseBankSets
         clause_bank_type = ClauseBankSets
         clause_bank_args = dict(
+            sets=self.sets,
             X_shape=X.shape,
             d=self.d,
             s=self.s,

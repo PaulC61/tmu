@@ -32,6 +32,7 @@ LOGGER = logging.getLogger(__name__)
 class ClauseBankSets(BaseClauseBank):
     def __init__(
             self,
+            sets,
             seed: int,
             number_of_states,
             d: float,
@@ -49,6 +50,10 @@ class ClauseBankSets(BaseClauseBank):
         self.number_of_states = int(number_of_states)
         self.batching = batching
         self.incremental = incremental
+
+        self.sets = sets
+        self.number_of_sets = self.sets.shape[0]
+        print(self.sets, self.number_of_sets)
 
         self.d = d
 
@@ -136,6 +141,7 @@ class ClauseBankSets(BaseClauseBank):
             return self.clause_output
 
         if e % 32 == 0:
+
             lib.cbse_pack_X(
                 ffi.cast("int *", encoded_X[0].indptr.ctypes.data),
                 ffi.cast("int *", encoded_X[0].indices.ctypes.data),
@@ -144,16 +150,16 @@ class ClauseBankSets(BaseClauseBank):
                 self.ptr_packed_X,
                 self.number_of_literals
             )
+
             lib.cbse_calculate_clause_outputs_predict_packed_X(
                 self.ptr_packed_X,
                 self.number_of_clauses,
                 self.number_of_literals,
                 self.ptr_clause_output_batch,
                 self.ptr_clause_bank_included,
-                self.ptr_clause_bank_included_length,
-                # self.cbia_p,
-                # self.cbial_p
+                self.ptr_clause_bank_included_length
             )
+
         lib.cbse_unpack_clause_output(
             e,
             self.ptr_clause_output,
@@ -241,7 +247,7 @@ class ClauseBankSets(BaseClauseBank):
             self.ptr_Xi,
             self.number_of_features
         )
-        
+
         lib.cbse_type_ii_feedback(
             update_p,
             ffi.cast("int *", clause_active.ctypes.data),
