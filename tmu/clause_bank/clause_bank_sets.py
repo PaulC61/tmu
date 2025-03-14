@@ -59,15 +59,8 @@ class ClauseBankSets(BaseClauseBank):
 
         LOGGER.warning("reuse_random_feedback is not implemented yet")
 
-        if self.patch_dim is None:
-            self.patch_dim = (self.dim[0] * self.dim[1] * self.dim[2], 1)
-
-        self.number_of_features = int(
-            self.patch_dim[0] * self.patch_dim[1] * self.dim[2] + (self.dim[0] - self.patch_dim[0]) + (
-                    self.dim[1] - self.patch_dim[1]))
+        self.number_of_features = self.X_shape[1] #self.number_of_sets
         self.number_of_literals = self.number_of_features * 2
-
-        self.number_of_patches = int((self.dim[0] - self.patch_dim[0] + 1) * (self.dim[1] - self.patch_dim[1] + 1))
         self.number_of_ta_chunks = int((self.number_of_literals - 1) / 32 + 1)
 
         self.clause_output = np.ascontiguousarray(np.empty((int(self.number_of_clauses)), dtype=np.uint32))
@@ -78,15 +71,26 @@ class ClauseBankSets(BaseClauseBank):
         self.clause_output_patchwise = np.ascontiguousarray(
             np.empty((int(self.number_of_clauses * self.number_of_patches)), dtype=np.uint32))
 
+        self.clause_bank_included = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
+                                                                  dtype=np.uint32))  # Contains index and state of included literals, none at start
+        self.clause_bank_included_length = np.ascontiguousarray(np.zeros(self.number_of_clauses, dtype=np.uint32))
+
+        self.clause_bank_excluded = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
+                                                                  dtype=np.uint32))  # Contains index and state of excluded literals
+        self.clause_bank_excluded_length = np.ascontiguousarray(np.zeros(self.number_of_clauses, dtype=np.uint32))  
+        self.clause_bank_excluded_length[:] = int(self.number_of_literals) # All literals excluded at start
+        for j in range(self.number_of_clauses):
+            self.clause_bank_excluded[j, :, 0] = np.arange(self.number_of_literals, dtype=np.uint32)
+            self.clause_bank_excluded[j, :, 1] = self.number_of_states // 2 - 1  # Initialize excluded literals in least forgotten state
+
         self.output_one_patches = np.ascontiguousarray(np.empty(self.number_of_patches, dtype=np.uint32))
 
         self.literal_clause_count = np.ascontiguousarray(np.empty((int(self.number_of_literals)), dtype=np.uint32))
 
         self.packed_X = np.ascontiguousarray(np.empty(self.number_of_literals, dtype=np.uint32))
-        self.ptr_packed_X = ffi.cast("unsigned int *", self.packed_X.ctypes.data)
 
+        # Feature vector for the sets
         self.Xi = np.ascontiguousarray(np.zeros(self.number_of_ta_chunks, dtype=np.uint32))
-        self.ptr_Xi = ffi.cast("unsigned int *", self.Xi.ctypes.data)
         for k in range(self.number_of_features, self.number_of_literals):
             chunk = k // 32
             pos = k % 32
@@ -95,24 +99,18 @@ class ClauseBankSets(BaseClauseBank):
         self._cffi_init()
 
     def _cffi_init(self):
-        self.clause_bank_included = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
-                                                                  dtype=np.uint32))  # Contains index and state of included literals, none at start
         self.ptr_clause_bank_included = ffi.cast("unsigned int *", self.clause_bank_included.ctypes.data)
-        self.clause_bank_included_length = np.ascontiguousarray(np.zeros(self.number_of_clauses, dtype=np.uint32))
         self.ptr_clause_bank_included_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_included_length.ctypes.data)
-
-        self.clause_bank_excluded = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
-                                                                  dtype=np.uint32))  # Contains index and state of excluded literals
+ 
         self.ptr_clause_bank_excluded = ffi.cast("unsigned int *", self.clause_bank_excluded.ctypes.data)
-        self.clause_bank_excluded_length = np.ascontiguousarray(
-            np.zeros(self.number_of_clauses, dtype=np.uint32))  
         self.ptr_clause_bank_excluded_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_excluded_length.ctypes.data)
-        self.clause_bank_excluded_length[:] = int(self.number_of_literals) # All literals excluded at start
-        for j in range(self.number_of_clauses):
-            self.clause_bank_excluded[j, :, 0] = np.arange(self.number_of_literals, dtype=np.uint32)
-            self.clause_bank_excluded[j, :, 1] = self.number_of_states // 2 - 1  # Initialize excluded literals in least forgotten state
+
+        self.ptr_Xi = ffi.cast("unsigned int *", self.Xi.ctypes.data)
+
+        self.ptr_packed_X = ffi.cast("unsigned int *", self.packed_X.ctypes.data)
+
 
     def calculate_clause_outputs_predict(self, encoded_X, e):
         if not self.batching:

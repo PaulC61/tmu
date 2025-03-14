@@ -31,6 +31,8 @@ class BaseClauseBank(CFFISerializable):
         self.seed = seed
         self.number_of_clauses = int(number_of_clauses)
 
+        self.X_shape = X_shape
+
         self.patch_dim = patch_dim
         self.s = s
         self.boost_true_positive_feedback = int(boost_true_positive_feedback)
