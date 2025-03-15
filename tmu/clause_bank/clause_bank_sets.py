@@ -48,28 +48,19 @@ class ClauseBankSets(BaseClauseBank):
     ):
         super().__init__(seed=seed, **kwargs)
         self.number_of_states = int(number_of_states)
-        self.batching = batching
         self.incremental = incremental
 
         self.sets = sets
         self.number_of_sets = self.sets.shape[0]
-        print(self.sets, self.number_of_sets)
+        self.number_of_elements = self.X_shape[1]
 
-        self.d = d
-
-        LOGGER.warning("reuse_random_feedback is not implemented yet")
-
-        self.number_of_features = self.X_shape[1] #self.number_of_sets
+        self.number_of_features = self.number_of_sets
         self.number_of_literals = self.number_of_features * 2
         self.number_of_ta_chunks = int((self.number_of_literals - 1) / 32 + 1)
 
-        self.clause_output = np.ascontiguousarray(np.empty((int(self.number_of_clauses)), dtype=np.uint32))
-        self.ptr_clause_output = ffi.cast("unsigned int *", self.clause_output.ctypes.data)
-        self.clause_output_batch = np.ascontiguousarray(np.empty((int(self.number_of_clauses)), dtype=np.uint32))
-        self.ptr_clause_output_batch = ffi.cast("unsigned int *", self.clause_output_batch.ctypes.data)
+        self.number_of_element_chunks = int((self.number_of_elements - 1) / 32 + 1)
 
-        self.clause_output_patchwise = np.ascontiguousarray(
-            np.empty((int(self.number_of_clauses * self.number_of_patches)), dtype=np.uint32))
+        self.clause_output = np.ascontiguousarray(np.empty((int(self.number_of_clauses)), dtype=np.uint32))
 
         self.clause_bank_included = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
                                                                   dtype=np.uint32))  # Contains index and state of included literals, none at start
@@ -77,7 +68,7 @@ class ClauseBankSets(BaseClauseBank):
 
         self.clause_bank_excluded = np.ascontiguousarray(np.zeros((self.number_of_clauses, self.number_of_literals, 2),
                                                                   dtype=np.uint32))  # Contains index and state of excluded literals
-        self.clause_bank_excluded_length = np.ascontiguousarray(np.zeros(self.number_of_clauses, dtype=np.uint32))  
+        self.clause_bank_excluded_length = np.ascontiguousarray(np.empty(self.number_of_clauses, dtype=np.uint32))  
         self.clause_bank_excluded_length[:] = int(self.number_of_literals) # All literals excluded at start
         for j in range(self.number_of_clauses):
             self.clause_bank_excluded[j, :, 0] = np.arange(self.number_of_literals, dtype=np.uint32)
@@ -87,14 +78,8 @@ class ClauseBankSets(BaseClauseBank):
 
         self.literal_clause_count = np.ascontiguousarray(np.empty((int(self.number_of_literals)), dtype=np.uint32))
 
-        self.packed_X = np.ascontiguousarray(np.empty(self.number_of_literals, dtype=np.uint32))
-
-        # Feature vector for the sets
-        self.Xi = np.ascontiguousarray(np.zeros(self.number_of_ta_chunks, dtype=np.uint32))
-        for k in range(self.number_of_features, self.number_of_literals):
-            chunk = k // 32
-            pos = k % 32
-            self.Xi[chunk] |= (1 << pos)
+        # Feature vector for calculating set intersections
+        self.Xi = np.ascontiguousarray(np.zeros(self.number_of_element_chunks, dtype=np.uint32))
 
         self._cffi_init()
 
@@ -102,94 +87,40 @@ class ClauseBankSets(BaseClauseBank):
         self.ptr_clause_bank_included = ffi.cast("unsigned int *", self.clause_bank_included.ctypes.data)
         self.ptr_clause_bank_included_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_included_length.ctypes.data)
- 
+        self.ptr_clause_output = ffi.cast("unsigned int *", self.clause_output.ctypes.data)
+
         self.ptr_clause_bank_excluded = ffi.cast("unsigned int *", self.clause_bank_excluded.ctypes.data)
         self.ptr_clause_bank_excluded_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_excluded_length.ctypes.data)
-
         self.ptr_Xi = ffi.cast("unsigned int *", self.Xi.ctypes.data)
 
-        self.ptr_packed_X = ffi.cast("unsigned int *", self.packed_X.ctypes.data)
-
-
-    def calculate_clause_outputs_predict(self, encoded_X, e):
-        if not self.batching:
-            lib.cbse_prepare_Xi(
-                encoded_X[1][e],
-                encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-                self.ptr_Xi,
-                self.number_of_features
-            )
-            lib.cbse_calculate_clause_outputs_predict(
-                self.ptr_Xi,
-                self.number_of_clauses,
-                self.number_of_literals,
-                self.ptr_clause_output,
-                self.ptr_clause_bank_included,
-                self.ptr_clause_bank_included_length,
-                self.cbia_p,
-                self.cbial_p,
-            )
-            lib.cbse_restore_Xi(
-                encoded_X[1][e],
-                encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-                self.ptr_Xi,
-                self.number_of_features
-            )
-            return self.clause_output
-
-        if e % 32 == 0:
-
-            lib.cbse_pack_X(
-                ffi.cast("int *", encoded_X[0].indptr.ctypes.data),
-                ffi.cast("int *", encoded_X[0].indices.ctypes.data),
-                encoded_X[0].indptr.shape[0] - 1,
-                e,
-                self.ptr_packed_X,
-                self.number_of_literals
-            )
-
-            lib.cbse_calculate_clause_outputs_predict_packed_X(
-                self.ptr_packed_X,
-                self.number_of_clauses,
-                self.number_of_literals,
-                self.ptr_clause_output_batch,
-                self.ptr_clause_bank_included,
-                self.ptr_clause_bank_included_length
-            )
-
-        lib.cbse_unpack_clause_output(
-            e,
-            self.ptr_clause_output,
-            self.ptr_clause_output_batch,
-            self.number_of_clauses
-        )
-        return self.clause_output
-
-    def calculate_clause_outputs_update(self, literal_active, encoded_X, e):
-        lib.cbse_prepare_Xi(
+    def calculate_clause_outputs_predict(self, encoded_X, e):       
+        lib.cbse_calculate_clause_outputs_predict(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_features
-        )
-        lib.cbse_calculate_clause_outputs_update(
-            ffi.cast("unsigned int *", literal_active.ctypes.data),
             self.ptr_Xi,
             self.number_of_clauses,
             self.number_of_literals,
             self.ptr_clause_output,
             self.ptr_clause_bank_included,
-            self.ptr_clause_bank_included_length,
-            # self.cbia_p,
-            # self.cbial_p
+            self.ptr_clause_bank_included_length
         )
-        lib.cbse_restore_Xi(
+ 
+        return self.clause_output
+
+    def calculate_clause_outputs_update(self, literal_active, encoded_X, e):
+        lib.cbse_calculate_clause_outputs_update(
+            ffi.cast("unsigned int *", literal_active.ctypes.data),
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
             self.ptr_Xi,
-            self.number_of_features
+            self.number_of_clauses,
+            self.number_of_literals,
+            self.ptr_clause_output,
+            self.ptr_clause_bank_included,
+            self.ptr_clause_bank_included_length
         )
+
         return self.clause_output
 
     def type_i_feedback(
@@ -200,13 +131,6 @@ class ClauseBankSets(BaseClauseBank):
             encoded_X,
             e
     ):
-        lib.cbse_prepare_Xi(
-            encoded_X[1][e],
-            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_features
-        )
-
         lib.cbse_type_i_feedback(
             update_p,
             self.s,
@@ -214,6 +138,8 @@ class ClauseBankSets(BaseClauseBank):
             self.max_included_literals,
             ffi.cast("int *", clause_active.ctypes.data),
             ffi.cast("unsigned int *", literal_active.ctypes.data),
+            encoded_X[1][e],
+            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
             self.ptr_Xi,
             self.number_of_clauses,
             self.number_of_literals,
@@ -222,13 +148,6 @@ class ClauseBankSets(BaseClauseBank):
             self.ptr_clause_bank_included_length,
             self.ptr_clause_bank_excluded,
             self.ptr_clause_bank_excluded_length
-        )
-
-        lib.cbse_restore_Xi(
-            encoded_X[1][e],
-            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_features
         )
 
     def type_ii_feedback(
@@ -239,17 +158,12 @@ class ClauseBankSets(BaseClauseBank):
             encoded_X,
             e
     ):
-        lib.cbse_prepare_Xi(
-            encoded_X[1][e],
-            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_features
-        )
-
         lib.cbse_type_ii_feedback(
             update_p,
             ffi.cast("int *", clause_active.ctypes.data),
             ffi.cast("unsigned int *", literal_active.ctypes.data),
+            encoded_X[1][e],
+            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
             self.ptr_Xi,
             self.number_of_clauses,
             self.number_of_literals,
@@ -258,13 +172,6 @@ class ClauseBankSets(BaseClauseBank):
             self.ptr_clause_bank_included_length,
             self.ptr_clause_bank_excluded,
             self.ptr_clause_bank_excluded_length
-        )
-
-        lib.cbse_restore_Xi(
-            encoded_X[1][e],
-            encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_features
         )
 
     def number_of_include_actions(self, clause):

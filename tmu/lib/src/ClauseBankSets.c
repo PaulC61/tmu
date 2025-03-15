@@ -72,49 +72,10 @@ void cbse_restore_Xi(
     }
 }
 
-void cbse_pack_X(
-        int *indptr,
-        int *indices,
-        int number_of_examples,
-        int e,
-        unsigned int *packed_X,
-        int number_of_literals
-)
-{
-    for (int k = 0; k < number_of_literals/2; ++k) {
-    	packed_X[k] = 0U;
-    }
-
-    for (int k = number_of_literals/2; k < number_of_literals; ++k) {
-    	packed_X[k] = ~0U;
-    }
-
-    for (int i = 0; i < 32; ++i) {
-        if (e+i >= number_of_examples) {
-            break;
-        }
-
-        for (int k = indptr[e+i]; k < indptr[e+i+1]; ++k) {
-            packed_X[indices[k]] |= (1U << i);
-            packed_X[indices[k] + number_of_literals/2] &= ~(1U << i);
-        }
-    }
-}
-
-void cbse_unpack_clause_output(
-        int e,
-        unsigned int *clause_output,
-        unsigned int *clause_output_batch,
-        int number_of_clauses
-)
-{
-	for (int j = 0; j < number_of_clauses; ++j) {
-		clause_output[j] = ((clause_output_batch[j] & (1U << (e % 32U))) > 0);
-	}
-}
-
 void cbse_calculate_clause_outputs_update(
         unsigned int *literal_active,
+        unsigned int *indices,
+        int number_of_indices,
         unsigned int *Xi,
         int number_of_clauses,
         int number_of_literals,
@@ -137,30 +98,9 @@ void cbse_calculate_clause_outputs_update(
     }
 }
 
-void cbse_calculate_clause_outputs_predict_packed_X(
-        unsigned int *packed_X,
-        int number_of_clauses,
-        int number_of_literals,
-        unsigned int *clause_output_batch,
-        unsigned int *clause_bank_included,
-        unsigned int *clause_bank_included_length
-)
-{
-     for (int j = 0; j < number_of_clauses; ++j) {
-         if (clause_bank_included_length[j] == 0) {
-             clause_output_batch[j] = 0;
-        } else {
-             clause_output_batch[j] = ~0;
-        }
-
-        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-        	unsigned int clause_pos = j*number_of_literals*2 + k*2;
-        	clause_output_batch[j] &= packed_X[clause_bank_included[clause_pos]];
-        }
-    }
-}
-
 void cbse_calculate_clause_outputs_predict(
+        unsigned int *indices,
+        int number_of_indices,
         unsigned int *Xi,
         int number_of_clauses,
         int number_of_literals,
@@ -195,6 +135,8 @@ void cbse_type_i_feedback(
         int max_included_literals,
         int *clause_active,
         unsigned int *literal_active,
+        unsigned int *indices,
+        int number_of_indices,
         unsigned int *Xi,
         int number_of_clauses,
         int number_of_literals,
@@ -227,7 +169,8 @@ void cbse_type_i_feedback(
 
         // Clause output is 1 if pop count is > 0
 
-        // Calculate intersection with each set, which becomes the truth values for updating...
+        // Calculate intersection with each set, which gives the truth values for updating, creating a new literal vector...
+
 
         if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
             // Update state of included literals
@@ -358,6 +301,8 @@ void cbse_type_ii_feedback(
         float update_p,
         int *clause_active,
         unsigned int *literal_active,
+        unsigned int *indices,
+        int number_of_indices,
         unsigned int *Xi,
         int number_of_clauses,
         int number_of_literals,

@@ -25,47 +25,10 @@ https://arxiv.org/abs/1905.09688
 
 */
 
-void cbse_prepare_Xi(
-    unsigned int *indices,
-    int number_of_indices,
-    unsigned int *Xi,
-    int number_of_features
-);
-
-void cbse_restore_Xi(
-    unsigned int *indices,
-    int number_of_indices,
-    unsigned int *Xi,
-    int number_of_features
-);
-
-void cbse_calculate_clause_outputs_predict_packed_X(
-    unsigned int *packed_X,
-    int number_of_clauses,
-    int number_of_literals,
-    unsigned int *clause_output_batch,
-    unsigned int *clause_bank_included,
-    unsigned int *clause_bank_included_length
-);
-
-void cbse_unpack_clause_output(
-    int e,
-    unsigned int *clause_output,
-    unsigned int *clause_output_batch,
-    int number_of_clauses
-);
-
-void cbse_pack_X(
-    int *indptr,
-    int *indices,
-    int number_of_examples,
-    int e,
-    unsigned int *packed_X,
-    int number_of_literals
-);
-
 void cbse_calculate_clause_outputs_update(
     unsigned int *literal_active,
+    unsigned int *indices,
+    int number_of_indices,
     unsigned int *Xi,
     int number_of_clauses,
     int number_of_literals,
@@ -75,6 +38,8 @@ void cbse_calculate_clause_outputs_update(
 );
 
 void cbse_calculate_clause_outputs_predict(
+    unsigned int *indices,
+    int number_of_indices,
     unsigned int *Xi,
     int number_of_clauses,
     int number_of_literals,
@@ -90,6 +55,8 @@ void cbse_type_i_feedback(
     int max_included_literals,
     int *clause_active,
     unsigned int *literal_active,
+    unsigned int *indices,
+    int number_of_indices,
     unsigned int *Xi,
     int number_of_clauses,
     int number_of_literals,
@@ -104,6 +71,8 @@ void cbse_type_ii_feedback(
     float update_p,
     int *clause_active,
     unsigned int *literal_active,
+    unsigned int *indices,
+    int number_of_indices,
     unsigned int *Xi,
     int number_of_clauses,
     int number_of_literals,

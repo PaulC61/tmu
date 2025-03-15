@@ -64,7 +64,7 @@ def main(args):
         tokenizer=lambda s: s,
         token_pattern=None,
         ngram_range=(1, args.max_ngram),
-        max_features=100000,
+        max_features=10000,
         lowercase=False,
         binary=True
     )
@@ -90,7 +90,7 @@ def main(args):
     print(documents)
     concepts = vectorizer_X.transform(documents)
     print(concepts)
-    
+
     _LOGGER.info("Selecting Features.... Done!")
 
     tm = TMClassifier(
@@ -135,8 +135,8 @@ def default_args(**kwargs):
     parser.add_argument("--epochs", default=60, type=int)
     parser.add_argument("--clause_drop_p", default=0.75, type=float)
     parser.add_argument("--max-ngram", default=2, type=int)
-    parser.add_argument("--features", default=5000, type=int)
-    parser.add_argument("--imdb-num-words", default=5000, type=int)
+    parser.add_argument("--features", default=10000, type=int)
+    parser.add_argument("--imdb-num-words", default=10000, type=int)
     parser.add_argument("--imdb-index-from", default=2, type=int)
     args = parser.parse_args()
     for key, value in kwargs.items():
