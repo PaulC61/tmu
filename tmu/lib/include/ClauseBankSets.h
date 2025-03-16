@@ -41,29 +41,31 @@ void cbse_calculate_clause_outputs(
         int number_of_elements,
         int number_of_clauses,
         unsigned int *clause_output,
-        unsigned int *set_intersection,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
-        unsigned int *empty_clause_false
+        unsigned int empty_clause_false
 );
 
 void cbse_type_i_feedback(
-    float update_p,
-    float s,
-    int boost_true_positive_feedback,
-    int max_included_literals,
-    int *clause_active,
-    unsigned int *literal_active,
-    unsigned int *indices,
-    int number_of_indices,
-    unsigned int *Xi,
-    int number_of_clauses,
-    int number_of_literals,
-    int number_of_states,
-    unsigned int *clause_bank_included,
-    unsigned int *clause_bank_included_length,
-    unsigned int *clause_bank_excluded,
-    unsigned int *clause_bank_excluded_length
+        float update_p,
+        int number_of_clauses,
+        int number_of_states,
+        float s,
+        int boost_true_positive_feedback,
+        int max_included_literals,
+        int *clause_active,
+        unsigned int *input_set_indices,
+        int input_set_number_of_indices,
+        unsigned int *concept_sets,
+        int number_of_concept_sets,
+        int number_of_elements,
+        unsigned int *set_intersection,
+        unsigned int *true_concept_sets,
+        unsigned int *clause_output,
+        unsigned int *clause_bank_included,
+        unsigned int *clause_bank_included_length,
+        unsigned int *clause_bank_excluded,
+        unsigned int *clause_bank_excluded_length
 );
 
 void cbse_type_ii_feedback(

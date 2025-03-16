@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 class ClauseBankSets(BaseClauseBank):
     def __init__(
             self,
-            sets,
+            concept_sets,
             seed: int,
             number_of_states,
             d: float,
@@ -50,11 +50,11 @@ class ClauseBankSets(BaseClauseBank):
         self.number_of_states = int(number_of_states)
         self.incremental = incremental
 
-        self.sets = sets
-        self.number_of_sets = self.sets.shape[0]
+        self.concept_sets = concept_sets
+        self.number_of_concept_sets = self.concept_sets.shape[0]
         self.number_of_elements = self.X_shape[1]
 
-        self.number_of_features = self.number_of_sets
+        self.number_of_features = self.number_of_concept_sets
         self.number_of_literals = self.number_of_features * 2
         self.number_of_ta_chunks = int((self.number_of_literals - 1) / 32 + 1)
 
@@ -79,13 +79,15 @@ class ClauseBankSets(BaseClauseBank):
         self.literal_clause_count = np.ascontiguousarray(np.empty((int(self.number_of_literals)), dtype=np.uint32))
 
         # Feature vector for calculating set intersections
-        self.intersection_Xi = np.ascontiguousarray(np.zeros(self.number_of_element_chunks, dtype=np.uint32))
+        self.set_intersection = np.ascontiguousarray(np.zeros(self.number_of_element_chunks, dtype=np.uint32))
 
-        self.encoded_sets = np.ascontiguousarray(np.zeros((self.number_of_sets, self.number_of_element_chunks), dtype=np.uint32))
+        self.encoded_concept_sets = np.ascontiguousarray(np.zeros((self.number_of_concept_sets, self.number_of_element_chunks), dtype=np.uint32))
+
+        self.true_concept_sets = np.ascontiguousarray(np.zeros(self.number_of_concept_sets, dtype=np.uint32))
 
         self._cffi_init()
 
-        lib.cbse_encode_sets(self.ptr_sets_indptr, self.ptr_sets_indices, self.number_of_sets, self.ptr_encoded_sets)
+        lib.cbse_encode_sets(self.ptr_concept_sets_indptr, self.ptr_concept_sets_indices, self.number_of_concept_sets, self.ptr_encoded_concept_sets)
 
     def _cffi_init(self):
         self.ptr_clause_bank_included = ffi.cast("unsigned int *", self.clause_bank_included.ctypes.data)
@@ -96,18 +98,20 @@ class ClauseBankSets(BaseClauseBank):
         self.ptr_clause_bank_excluded = ffi.cast("unsigned int *", self.clause_bank_excluded.ctypes.data)
         self.ptr_clause_bank_excluded_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_excluded_length.ctypes.data)
-        self.ptr_intersection_Xi = ffi.cast("unsigned int *", self.intersection_Xi.ctypes.data)
+        self.ptr_set_intersection = ffi.cast("unsigned int *", self.set_intersection.ctypes.data)
 
-        self.ptr_sets_indptr = ffi.cast("unsigned int *", self.sets.indptr.ctypes.data)
-        self.ptr_sets_indices = ffi.cast("unsigned int *", self.sets.indices.ctypes.data)
-        self.ptr_encoded_sets = ffi.cast("unsigned int *", self.encoded_sets.ctypes.data)
+        self.ptr_concept_sets_indptr = ffi.cast("unsigned int *", self.concept_sets.indptr.ctypes.data)
+        self.ptr_concept_sets_indices = ffi.cast("unsigned int *", self.concept_sets.indices.ctypes.data)
+        self.ptr_encoded_concept_sets = ffi.cast("unsigned int *", self.encoded_concept_sets.ctypes.data)
+
+        self.ptr_true_concept_sets = ffi.cast("unsigned int *", self.true_concept_sets.ctypes.data)
 
     def calculate_clause_outputs_predict(self, encoded_X, e):       
         lib.cbse_calculate_clause_outputs(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_encoded_sets,
-            self.number_of_sets,
+            self.ptr_encoded_concept_sets,
+            self.number_of_concept_sets,
             self.number_of_elements
             self.number_of_clauses,
             self.ptr_clause_output,
@@ -122,8 +126,8 @@ class ClauseBankSets(BaseClauseBank):
         lib.cbse_calculate_clause_outputs(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_encoded_sets,
-            self.number_of_sets,
+            self.ptr_encoded_concept_sets,
+            self.number_of_concept_sets,
             self.number_of_elements
             self.number_of_clauses,
             self.ptr_clause_output,
@@ -144,17 +148,20 @@ class ClauseBankSets(BaseClauseBank):
     ):
         lib.cbse_type_i_feedback(
             update_p,
+            self.number_of_clauses,
+            self.number_of_states,
             self.s,
             self.boost_true_positive_feedback,
             self.max_included_literals,
             ffi.cast("int *", clause_active.ctypes.data),
-            ffi.cast("unsigned int *", literal_active.ctypes.data),
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
-            self.number_of_clauses,
-            self.number_of_literals,
-            self.number_of_states,
+            self.ptr_concept_sets_indices,
+            self.number_of_concept_sets, 
+            self.number_of_elements,
+            self.ptr_set_intersection,
+            self.ptr_true_concept_sets,
+            self.ptr_clause_output,
             self.ptr_clause_bank_included,
             self.ptr_clause_bank_included_length,
             self.ptr_clause_bank_excluded,

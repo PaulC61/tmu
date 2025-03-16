@@ -67,7 +67,7 @@ void cbse_calculate_clause_outputs(
         unsigned int *clause_output,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
-        unsigned int *empty_clause_false
+        unsigned int empty_clause_false
 )
 {
     unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
@@ -134,12 +134,14 @@ void cbse_type_i_feedback(
 			continue;
 		}
 
+        int clause_pos_base = j*number_of_concept_sets*2;
+
         if (clause_output[j] && (clause_bank_included_length[j] <= max_included_literals)) {
             // Clause True
 
             // Set all the included concept sets as True
             for (int l = 0; l < clause_bank_included_length[j]; ++l) {
-                unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
+                unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
                 true_concept_sets[concept_set] = 1;
             }
 
@@ -153,7 +155,7 @@ void cbse_type_i_feedback(
                 // Check whether the input element is an element in all of the sets included by the clause (a match)
                 unsigned int match = 1;
                 for (int l = 0; l < clause_bank_included_length[j]; ++l) {
-                    unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
+                    unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
 
                     if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
                         match = 0;
@@ -169,7 +171,7 @@ void cbse_type_i_feedback(
             // Go through excluded concept sets and determine overlap with intersection of input and included concept sets
             // If there is an overlap, set the excluded concept set to True. Otherwise, set it to False
             for (int l = 0; l < clause_bank_excluded_length[j]; ++l) {
-                unsigned int concept_set = clause_bank_excluded[j*number_of_concept_sets*2 + l*2];
+                unsigned int concept_set = clause_bank_excluded[clause_pos_base + l*2];
 
                 true_concept_sets[concept_set] = 0;
                 for (int k = 0; k < input_set_number_of_indices; ++k) {
@@ -196,10 +198,6 @@ void cbse_type_i_feedback(
                 int clause_excluded_pos = clause_pos_base + k*2;
                 unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
                 unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
-        
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
 
                 if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
                     clause_bank_excluded[clause_excluded_pos + 1] -= 1;
@@ -211,10 +209,6 @@ void cbse_type_i_feedback(
                 int clause_included_pos = clause_pos_base + k*2;
                 unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
                 unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
-
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
 
                 if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
                     clause_bank_included[clause_included_pos + 1] -= 1;
@@ -240,80 +234,72 @@ void cbse_type_i_feedback(
             }
         }
 
-        if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
-            // Update state of included literals
-			for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-				int clause_included_pos = clause_pos_base + k*2;
-	            unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
-	            unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
+        // if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
+        //     // Update state of included literals
+		// 	for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+		// 		int clause_included_pos = clause_pos_base + k*2;
+	    //         unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
+	    //         unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
 
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
+        //     	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
+        //            	if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
+        //                 clause_bank_included[clause_included_pos + 1] += 1;
+        //         	}
+        //         } else if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
+        //             clause_bank_included[clause_included_pos + 1] -= 1;
+        //         }
+        //     }
 
-            	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
-                   	if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
-                        clause_bank_included[clause_included_pos + 1] += 1;
-                	}
-                } else if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
-                    clause_bank_included[clause_included_pos + 1] -= 1;
-                }
-            }
+        //     // Update state of excluded literals
+		// 	for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+		// 		int clause_excluded_pos = clause_pos_base + k*2;
+        //     	unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
+        //     	unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
 
-            // Update state of excluded literals
-			for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
-				int clause_excluded_pos = clause_pos_base + k*2;
-            	unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
-            	unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
-		
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
+        //     	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
+	    //            if (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s)) {
+        //                 clause_bank_excluded[clause_excluded_pos + 1] += 1;
+        //             }
+        //         } else if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
+        //             clause_bank_excluded[clause_excluded_pos + 1] -= 1;
+        //         }
+        //     }
 
-            	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
-	               if (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s)) {
-                        clause_bank_excluded[clause_excluded_pos + 1] += 1;
-                    }
-                } else if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
-                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
-                }
-            }
+        //     // Update lists
+        //     int k = clause_bank_included_length[j];
+        //     while (k--) {
+        //         int clause_included_pos = clause_pos_base + k*2;
 
-            // Update lists
-            int k = clause_bank_included_length[j];
-            while (k--) {
-                int clause_included_pos = clause_pos_base + k*2;
+        //         if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
+        //             int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
+        //             clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
+        //             clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
+        //             clause_bank_excluded_length[j] += 1;
 
-                if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
-                    int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
-                    clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
-                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
-                    clause_bank_excluded_length[j] += 1;
+        //             clause_bank_included_length[j] -= 1;
+        //             int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
+        //             clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
+        //             clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
+        //         }
+        //     }
 
-                    clause_bank_included_length[j] -= 1;
-                    int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
-                    clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
-                    clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
-                }
-            }
+        //     k = clause_bank_excluded_length[j];
+        //     while (k--) {
+        //         int clause_excluded_pos = clause_pos_base + k*2;
 
-            k = clause_bank_excluded_length[j];
-            while (k--) {
-                int clause_excluded_pos = clause_pos_base + k*2;
+        //         if (clause_bank_excluded[clause_excluded_pos + 1] >= number_of_states / 2) {
+        //             int clause_included_pos = clause_pos_base + clause_bank_included_length[j]*2;
+        //             clause_bank_included[clause_included_pos] = clause_bank_excluded[clause_excluded_pos];
+        //             clause_bank_included[clause_included_pos + 1] = clause_bank_excluded[clause_excluded_pos + 1];
+        //             clause_bank_included_length[j] += 1;
 
-                if (clause_bank_excluded[clause_excluded_pos + 1] >= number_of_states / 2) {
-                    int clause_included_pos = clause_pos_base + clause_bank_included_length[j]*2;
-                    clause_bank_included[clause_included_pos] = clause_bank_excluded[clause_excluded_pos];
-                    clause_bank_included[clause_included_pos + 1] = clause_bank_excluded[clause_excluded_pos + 1];
-                    clause_bank_included_length[j] += 1;
-
-                    clause_bank_excluded_length[j] -= 1;
-                    int clause_excluded_end_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
-                    clause_bank_excluded[clause_excluded_pos] = clause_bank_excluded[clause_excluded_end_pos];
-                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
-                } 
-            }
-        }
+        //             clause_bank_excluded_length[j] -= 1;
+        //             int clause_excluded_end_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
+        //             clause_bank_excluded[clause_excluded_pos] = clause_bank_excluded[clause_excluded_end_pos];
+        //             clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
+        //         } 
+        //     }
+        // }
     }
 }
 
