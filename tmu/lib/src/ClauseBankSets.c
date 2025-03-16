@@ -58,10 +58,10 @@ void cbse_encode_sets(
 }
 
 void cbse_calculate_clause_outputs(
-        unsigned int *X_indices,
-        int X_number_of_indices,
-        unsigned int *sets,
-        int number_of_sets,
+        unsigned int *input_set_indices,
+        int input_set_number_of_indices,
+        unsigned int *concept_sets,
+        int number_of_concept_sets,
         int number_of_elements,
         int number_of_clauses,
         unsigned int *clause_output,
@@ -75,6 +75,7 @@ void cbse_calculate_clause_outputs(
     // Evaluate each clause
     for (int j = 0; j < number_of_clauses; ++j) {
         if (empty_clause_false && clause_bank_included_length[j] == 0) {
+            clause_output[j] = 0;
             continue;
         }
 
@@ -82,16 +83,16 @@ void cbse_calculate_clause_outputs(
         int matches = 0;
 
         // Go through the elements in the input set, one element at a time
-        for (int k = 0; k < X_number_of_indices; ++k) {
-            unsigned int element_chunk = X_indices[k] / 32;
-            unsigned int element_pos = X_indices[k] % 32;
+        for (int k = 0; k < input_set_number_of_indices; ++k) {
+            unsigned int element_chunk = input_set_indices[k] / 32;
+            unsigned int element_pos = input_set_indices[k] % 32;
             
             // Check whether the input element is an element in all of the sets included by the clause (a match)
             unsigned int match = 1;
             for (int l = 0; l < clause_bank_included_length[j]; ++l) {
-                unsigned int set = clause_bank_included[j*number_of_sets*2 + l*2];
+                unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
 
-                if (sets[set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
                     match = 0;
                     break;
                 }
@@ -100,53 +101,144 @@ void cbse_calculate_clause_outputs(
             matches += match;
         }
 
-        clause_output[j] = matches > 0;
+        clause_output[j] = (matches > 0);
     }
 }
 
 void cbse_type_i_feedback(
         float update_p,
+        int number_of_clauses,
+        int number_of_states,
         float s,
         int boost_true_positive_feedback,
         int max_included_literals,
         int *clause_active,
-        unsigned int *literal_active,
-        unsigned int *indices,
-        int number_of_indices,
-        unsigned int *Xi,
-        int number_of_clauses,
-        int number_of_literals,
-        int number_of_states,
+        unsigned int *input_set_indices,
+        int input_set_number_of_indices,
+        unsigned int *concept_sets,
+        int number_of_concept_sets,
+        int number_of_elements,
+        unsigned int *set_intersection,
+        unsigned int *true_concept_sets,
+        unsigned int *clause_output,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
         unsigned int *clause_bank_excluded,
         unsigned int *clause_bank_excluded_length
 )
 {
-	unsigned int number_of_ta_chunks = (number_of_literals-1)/32 + 1;
+	unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
 
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {
 			continue;
 		}
 
-        // Calculate intersection of input and included sets...
-		int clause_pos_base = j*number_of_literals*2;
-        int clause_output = 1;
-        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-        	unsigned int clause_pos = clause_pos_base + k*2;
-            unsigned int literal_chunk = clause_bank_included[clause_pos] / 32;
-            unsigned int literal_pos = clause_bank_included[clause_pos] % 32;
-            if (((Xi[literal_chunk] & (1U << literal_pos)) == 0) && (literal_active[literal_chunk] & (1U << literal_pos))) {
-                clause_output = 0;
-                break;
+        if (clause_output[j] && (clause_bank_included_length[j] <= max_included_literals)) {
+            // Clause True
+
+            // Set all the included concept sets as True
+            for (int l = 0; l < clause_bank_included_length[j]; ++l) {
+                unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
+                true_concept_sets[concept_set] = 1;
+            }
+
+            // Calculate intersection of input and included sets...
+            // Go through the elements in the input set, one element at a time,
+            // and calculate intersection of input set and included concept sets
+            for (int k = 0; k < input_set_number_of_indices; ++k) {
+                unsigned int element_chunk = input_set_indices[k] / 32;
+                unsigned int element_pos = input_set_indices[k] % 32;
+                
+                // Check whether the input element is an element in all of the sets included by the clause (a match)
+                unsigned int match = 1;
+                for (int l = 0; l < clause_bank_included_length[j]; ++l) {
+                    unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
+
+                    if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                        match = 0;
+                        break;
+                    }
+                }
+
+                if (match) {
+                    set_intersection[element_chunk] |= (1U << element_pos);
+                }
+            }
+
+            // Go through excluded concept sets and determine overlap with intersection of input and included concept sets
+            // If there is an overlap, set the excluded concept set to True. Otherwise, set it to False
+            for (int l = 0; l < clause_bank_excluded_length[j]; ++l) {
+                unsigned int concept_set = clause_bank_excluded[j*number_of_concept_sets*2 + l*2];
+
+                true_concept_sets[concept_set] = 0;
+                for (int k = 0; k < input_set_number_of_indices; ++k) {
+                    unsigned int element = input_set_indices[k];
+                    unsigned int element_chunk = element / 32;
+                    unsigned int element_pos = element % 32;
+
+                    if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) > 0) &&
+                        (set_intersection[element_chunk] & (1U << element_pos) > 0)) {
+                        true_concept_sets[concept_set] = 1;
+                        break;
+                    }
+                }
+            }
+
+            // Give Type I Feedback based on true_concept_sets
+
+        } else {
+            // Clause False
+            // Type Ib Feedback
+
+            // Update state of included literals
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                int clause_excluded_pos = clause_pos_base + k*2;
+                unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
+                unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
+        
+                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
+                    continue;
+                }
+
+                if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
+                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
+                }
+            }
+        
+            // Update state of excluded literals
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                int clause_included_pos = clause_pos_base + k*2;
+                unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
+                unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
+
+                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
+                    continue;
+                }
+
+                if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
+                    clause_bank_included[clause_included_pos + 1] -= 1;
+                }
+            }
+
+            // Update lists
+            int k = clause_bank_included_length[j];
+            while (k--) {
+                int clause_included_pos = clause_pos_base + k*2;
+                
+                if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
+                    int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
+                    clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
+                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
+                    clause_bank_excluded_length[j] += 1;
+
+                    clause_bank_included_length[j] -= 1;
+                    int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
+                    clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
+                    clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
+                }  
             }
         }
-
-        // Clause output is 1 if pop count is > 0
-
-        // Calculate intersection with each set, which gives the truth values for updating, creating a new literal vector...
-
 
         if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
             // Update state of included literals
@@ -221,55 +313,7 @@ void cbse_type_i_feedback(
                     clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
                 } 
             }
-        } else {
-            // Update state of included literals
-            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
-                int clause_excluded_pos = clause_pos_base + k*2;
-                unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
-                unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
-        
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
-
-                if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
-                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
-                }
-            }
-        
-            // Update state of excluded literals
-			for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-				int clause_included_pos = clause_pos_base + k*2;
-            	unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
-            	unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
-
-                if ((literal_active[literal_chunk] & (1U << literal_pos)) == 0) {
-                    continue;
-                }
-
-				if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
-                    clause_bank_included[clause_included_pos + 1] -= 1;
-                }
-            }
-
-            // Update lists
-            int k = clause_bank_included_length[j];
-            while (k--) {
-                int clause_included_pos = clause_pos_base + k*2;
-                
-                if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
-                    int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
-                    clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
-                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
-                    clause_bank_excluded_length[j] += 1;
-
-                    clause_bank_included_length[j] -= 1;
-                    int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
-                    clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
-                    clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
-                }  
-            }
-    	}
+        }
     }
 }
 

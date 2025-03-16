@@ -34,13 +34,14 @@ void cbse_encode_sets(
 );
 
 void cbse_calculate_clause_outputs(
-        unsigned int *X_indices,
-        int X_number_of_indices,
-        unsigned int *sets,
-        int number_of_sets,
+        unsigned int *input_set_indices,
+        int input_set_number_of_indices,
+        unsigned int *concept_sets,
+        int number_of_concept_sets,
         int number_of_elements,
         int number_of_clauses,
         unsigned int *clause_output,
+        unsigned int *set_intersection,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
         unsigned int *empty_clause_false

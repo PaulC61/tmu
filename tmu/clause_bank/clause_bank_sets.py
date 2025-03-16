@@ -96,7 +96,7 @@ class ClauseBankSets(BaseClauseBank):
         self.ptr_clause_bank_excluded = ffi.cast("unsigned int *", self.clause_bank_excluded.ctypes.data)
         self.ptr_clause_bank_excluded_length = ffi.cast("unsigned int *",
                                                         self.clause_bank_excluded_length.ctypes.data)
-        self.ptr_Xi = ffi.cast("unsigned int *", self.Xi.ctypes.data)
+        self.ptr_intersection_Xi = ffi.cast("unsigned int *", self.intersection_Xi.ctypes.data)
 
         self.ptr_sets_indptr = ffi.cast("unsigned int *", self.sets.indptr.ctypes.data)
         self.ptr_sets_indices = ffi.cast("unsigned int *", self.sets.indices.ctypes.data)
