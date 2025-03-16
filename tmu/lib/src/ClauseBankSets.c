@@ -189,6 +189,66 @@ void cbse_type_i_feedback(
 
             // Give Type I Feedback based on true_concept_sets
 
+            // Update state of included literals
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                int clause_included_pos = clause_pos_base + k*2;
+ 
+                if (true_concept_sets[clause_bank_included[clause_included_pos]]) {
+                    if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
+                        clause_bank_included[clause_included_pos + 1] += 1;
+                    }
+                } else if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
+                    clause_bank_included[clause_included_pos + 1] -= 1;
+                }
+            }
+
+            // Update state of excluded literals
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                int clause_excluded_pos = clause_pos_base + k*2;
+               
+                if (true_concept_sets[clause_bank_excluded[clause_excluded_pos]]) {
+                    if (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s)) {
+                        clause_bank_excluded[clause_excluded_pos + 1] += 1;
+                    }
+                } else if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
+                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
+                }
+            }
+
+            // Update lists
+            int k = clause_bank_included_length[j];
+            while (k--) {
+                int clause_included_pos = clause_pos_base + k*2;
+
+                if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
+                    int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
+                    clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
+                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
+                    clause_bank_excluded_length[j] += 1;
+
+                    clause_bank_included_length[j] -= 1;
+                    int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
+                    clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
+                    clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
+                }
+            }
+
+            k = clause_bank_excluded_length[j];
+            while (k--) {
+                int clause_excluded_pos = clause_pos_base + k*2;
+
+                if (clause_bank_excluded[clause_excluded_pos + 1] >= number_of_states / 2) {
+                    int clause_included_pos = clause_pos_base + clause_bank_included_length[j]*2;
+                    clause_bank_included[clause_included_pos] = clause_bank_excluded[clause_excluded_pos];
+                    clause_bank_included[clause_included_pos + 1] = clause_bank_excluded[clause_excluded_pos + 1];
+                    clause_bank_included_length[j] += 1;
+
+                    clause_bank_excluded_length[j] -= 1;
+                    int clause_excluded_end_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
+                    clause_bank_excluded[clause_excluded_pos] = clause_bank_excluded[clause_excluded_end_pos];
+                    clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
+                } 
+            }
         } else {
             // Clause False
             // Type Ib Feedback
@@ -233,73 +293,6 @@ void cbse_type_i_feedback(
                 }  
             }
         }
-
-        // if (clause_output && (clause_bank_included_length[j] <= max_included_literals)) {
-        //     // Update state of included literals
-		// 	for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-		// 		int clause_included_pos = clause_pos_base + k*2;
-	    //         unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
-	    //         unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
-
-        //     	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
-        //            	if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
-        //                 clause_bank_included[clause_included_pos + 1] += 1;
-        //         	}
-        //         } else if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
-        //             clause_bank_included[clause_included_pos + 1] -= 1;
-        //         }
-        //     }
-
-        //     // Update state of excluded literals
-		// 	for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
-		// 		int clause_excluded_pos = clause_pos_base + k*2;
-        //     	unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
-        //     	unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
-
-        //     	if ((Xi[literal_chunk] & (1U << literal_pos)) != 0) {
-	    //            if (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s)) {
-        //                 clause_bank_excluded[clause_excluded_pos + 1] += 1;
-        //             }
-        //         } else if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
-        //             clause_bank_excluded[clause_excluded_pos + 1] -= 1;
-        //         }
-        //     }
-
-        //     // Update lists
-        //     int k = clause_bank_included_length[j];
-        //     while (k--) {
-        //         int clause_included_pos = clause_pos_base + k*2;
-
-        //         if (clause_bank_included[clause_included_pos + 1] < number_of_states / 2) {
-        //             int clause_excluded_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
-        //             clause_bank_excluded[clause_excluded_pos] = clause_bank_included[clause_included_pos];
-        //             clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_included[clause_included_pos + 1];
-        //             clause_bank_excluded_length[j] += 1;
-
-        //             clause_bank_included_length[j] -= 1;
-        //             int clause_included_end_pos = clause_pos_base + clause_bank_included_length[j]*2;
-        //             clause_bank_included[clause_included_pos] = clause_bank_included[clause_included_end_pos];       
-        //             clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
-        //         }
-        //     }
-
-        //     k = clause_bank_excluded_length[j];
-        //     while (k--) {
-        //         int clause_excluded_pos = clause_pos_base + k*2;
-
-        //         if (clause_bank_excluded[clause_excluded_pos + 1] >= number_of_states / 2) {
-        //             int clause_included_pos = clause_pos_base + clause_bank_included_length[j]*2;
-        //             clause_bank_included[clause_included_pos] = clause_bank_excluded[clause_excluded_pos];
-        //             clause_bank_included[clause_included_pos + 1] = clause_bank_excluded[clause_excluded_pos + 1];
-        //             clause_bank_included_length[j] += 1;
-
-        //             clause_bank_excluded_length[j] -= 1;
-        //             int clause_excluded_end_pos = clause_pos_base + clause_bank_excluded_length[j]*2;
-        //             clause_bank_excluded[clause_excluded_pos] = clause_bank_excluded[clause_excluded_end_pos];
-        //             clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
-        //         } 
-        //     }
-        // }
     }
 }
 
