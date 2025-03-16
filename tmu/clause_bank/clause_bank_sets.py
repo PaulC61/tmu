@@ -122,7 +122,7 @@ class ClauseBankSets(BaseClauseBank):
         lib.cbse_calculate_clause_outputs(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_sets,
+            self.ptr_encoded_sets,
             self.number_of_sets,
             self.number_of_elements
             self.number_of_clauses,

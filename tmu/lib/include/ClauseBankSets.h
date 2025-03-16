@@ -29,6 +29,7 @@ void cbse_encode_sets(
         unsigned int *sets_indptr,
         unsigned int *sets_indices,
         int number_of_sets,
+        int number_of_elements,
         unsigned int *encoded_sets
 );
 

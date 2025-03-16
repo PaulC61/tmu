@@ -42,10 +42,19 @@ void cbse_encode_sets(
         unsigned int *sets_indptr,
         unsigned int *sets_indices,
         int number_of_sets,
+        int number_of_elements,
         unsigned int *encoded_sets
 )
 {
+    unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
 
+    for (int i = 0; i < number_of_sets; ++i) {
+        for (int j = sets_indptr[i]; j < sets_indptr[i+1]; ++j) {
+            unsigned int element_chunk = sets_indices[j] / 32;
+            unsigned int element_pos = sets_indices[j] % 32;
+            encoded_sets[i*number_of_element_chunks + element_chunk] |= (1U << element_pos);
+        }
+    }
 }
 
 void cbse_calculate_clause_outputs(
