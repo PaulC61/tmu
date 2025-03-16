@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Ole-Christoffer Granmo
+# Copyright (c) 2025 Ole-Christoffer Granmo
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -79,9 +79,13 @@ class ClauseBankSets(BaseClauseBank):
         self.literal_clause_count = np.ascontiguousarray(np.empty((int(self.number_of_literals)), dtype=np.uint32))
 
         # Feature vector for calculating set intersections
-        self.Xi = np.ascontiguousarray(np.zeros(self.number_of_element_chunks, dtype=np.uint32))
+        self.intersection_Xi = np.ascontiguousarray(np.zeros(self.number_of_element_chunks, dtype=np.uint32))
+
+        self.encoded_sets = np.ascontiguousarray(np.zeros((self.number_of_sets, self.number_of_element_chunks), dtype=np.uint32))
 
         self._cffi_init()
+
+        lib.cbse_encode_sets(self.ptr_sets_indptr, self.ptr_sets_indices, self.number_of_sets, self.ptr_encoded_sets)
 
     def _cffi_init(self):
         self.ptr_clause_bank_included = ffi.cast("unsigned int *", self.clause_bank_included.ctypes.data)
@@ -94,31 +98,38 @@ class ClauseBankSets(BaseClauseBank):
                                                         self.clause_bank_excluded_length.ctypes.data)
         self.ptr_Xi = ffi.cast("unsigned int *", self.Xi.ctypes.data)
 
+        self.ptr_sets_indptr = ffi.cast("unsigned int *", self.sets.indptr.ctypes.data)
+        self.ptr_sets_indices = ffi.cast("unsigned int *", self.sets.indices.ctypes.data)
+        self.ptr_encoded_sets = ffi.cast("unsigned int *", self.encoded_sets.ctypes.data)
+
     def calculate_clause_outputs_predict(self, encoded_X, e):       
-        lib.cbse_calculate_clause_outputs_predict(
+        lib.cbse_calculate_clause_outputs(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
+            self.ptr_encoded_sets,
+            self.number_of_sets,
+            self.number_of_elements
             self.number_of_clauses,
-            self.number_of_literals,
             self.ptr_clause_output,
             self.ptr_clause_bank_included,
-            self.ptr_clause_bank_included_length
+            self.ptr_clause_bank_included_length,
+            1
         )
  
         return self.clause_output
 
     def calculate_clause_outputs_update(self, literal_active, encoded_X, e):
-        lib.cbse_calculate_clause_outputs_update(
-            ffi.cast("unsigned int *", literal_active.ctypes.data),
+        lib.cbse_calculate_clause_outputs(
             encoded_X[1][e],
             encoded_X[0].indptr[e + 1] - encoded_X[0].indptr[e],
-            self.ptr_Xi,
+            self.ptr_sets,
+            self.number_of_sets,
+            self.number_of_elements
             self.number_of_clauses,
-            self.number_of_literals,
             self.ptr_clause_output,
             self.ptr_clause_bank_included,
-            self.ptr_clause_bank_included_length
+            self.ptr_clause_bank_included_length,
+            0
         )
 
         return self.clause_output

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2023 Ole-Christoffer Granmo
+Copyright (c) 2025 Ole-Christoffer Granmo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,27 +25,24 @@ https://arxiv.org/abs/1905.09688
 
 */
 
-void cbse_calculate_clause_outputs_update(
-    unsigned int *literal_active,
-    unsigned int *indices,
-    int number_of_indices,
-    unsigned int *Xi,
-    int number_of_clauses,
-    int number_of_literals,
-    unsigned int *clause_output,
-    unsigned int *clause_bank_included,
-    unsigned int *clause_bank_included_length
+void cbse_encode_sets(
+        unsigned int *sets_indptr,
+        unsigned int *sets_indices,
+        int number_of_sets,
+        unsigned int *encoded_sets
 );
 
-void cbse_calculate_clause_outputs_predict(
-    unsigned int *indices,
-    int number_of_indices,
-    unsigned int *Xi,
-    int number_of_clauses,
-    int number_of_literals,
-    unsigned int *clause_output,
-    unsigned int *clause_bank_included,
-    unsigned int *clause_bank_included_length
+void cbse_calculate_clause_outputs(
+        unsigned int *X_indices,
+        int X_number_of_indices,
+        unsigned int *sets,
+        int number_of_sets,
+        int number_of_elements,
+        int number_of_clauses,
+        unsigned int *clause_output,
+        unsigned int *clause_bank_included,
+        unsigned int *clause_bank_included_length,
+        unsigned int *empty_clause_false
 );
 
 void cbse_type_i_feedback(

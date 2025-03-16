@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2023 Ole-Christoffer Granmo
+Copyright (c) 2025 Ole-Christoffer Granmo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,93 +38,60 @@ https://arxiv.org/abs/1905.09688
 #include "fast_rand.h"
 #include <stdint.h>
 
-void cbse_prepare_Xi(
-        unsigned int *indices,
-        int number_of_indices,
-        unsigned int *Xi,
-        int number_of_features
+void cbse_encode_sets(
+        unsigned int *sets_indptr,
+        unsigned int *sets_indices,
+        int number_of_sets,
+        unsigned int *encoded_sets
 )
 {
-    for (int k = 0; k < number_of_indices; ++k) { 
-        unsigned int chunk = indices[k] / 32;
-        unsigned int pos = indices[k] % 32;
-        Xi[chunk] |= (1U << pos);
-        chunk = (indices[k] + number_of_features) / 32;
-        pos = (indices[k] + number_of_features) % 32;
-        Xi[chunk] &= ~(1U << pos);
-    }
+
 }
 
-void cbse_restore_Xi(
-        unsigned int *indices,
-        int number_of_indices,
-        unsigned int *Xi,
-        int number_of_features
-)
-{
-    for (int k = 0; k < number_of_indices; ++k) { 
-        unsigned int chunk = indices[k] / 32;
-        unsigned int pos = indices[k] % 32;
-        Xi[chunk] &= ~(1U << pos);
-        chunk = (indices[k] + number_of_features) / 32;
-        pos = (indices[k] + number_of_features) % 32;
-        Xi[chunk] |= (1U << pos);
-    }
-}
-
-void cbse_calculate_clause_outputs_update(
-        unsigned int *literal_active,
-        unsigned int *indices,
-        int number_of_indices,
-        unsigned int *Xi,
+void cbse_calculate_clause_outputs(
+        unsigned int *X_indices,
+        int X_number_of_indices,
+        unsigned int *sets,
+        int number_of_sets,
+        int number_of_elements,
         int number_of_clauses,
-        int number_of_literals,
         unsigned int *clause_output,
         unsigned int *clause_bank_included,
-        unsigned int *clause_bank_included_length
+        unsigned int *clause_bank_included_length,
+        unsigned int *empty_clause_false
 )
 {
-    for (int j = 0; j < number_of_clauses; ++j) {
-        clause_output[j] = 1;
-        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-        	unsigned int clause_pos = j*number_of_literals*2 + k*2;
-            unsigned int literal_chunk = clause_bank_included[clause_pos] / 32U;
-            unsigned int literal_pos = clause_bank_included[clause_pos] % 32U;
-            if (((Xi[literal_chunk] & (1U << literal_pos)) == 0) && (literal_active[literal_chunk] & (1U << literal_pos))) {
-                clause_output[j] = 0;
-                break;
-            }
-        }
-    }
-}
+    unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
 
-void cbse_calculate_clause_outputs_predict(
-        unsigned int *indices,
-        int number_of_indices,
-        unsigned int *Xi,
-        int number_of_clauses,
-        int number_of_literals,
-        unsigned int *clause_output,
-        unsigned int *clause_bank_included,
-        unsigned int *clause_bank_included_length
-)
-{
+    // Evaluate each clause
     for (int j = 0; j < number_of_clauses; ++j) {
-        if (clause_bank_included_length[j] == 0) {
-            clause_output[j] = 0;
-        } else {
-            clause_output[j] = 1;
+        if (empty_clause_false && clause_bank_included_length[j] == 0) {
+            continue;
         }
 
-        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
-            unsigned int clause_pos = j*number_of_literals*2 + k*2;
-            unsigned int literal_chunk = clause_bank_included[clause_pos] / 32;
-            unsigned int literal_pos = clause_bank_included[clause_pos] % 32;
-            if ((Xi[literal_chunk] & (1U << literal_pos)) == 0) {
-                clause_output[j] = 0;
-                break;
+        // Calculate the size of the intersection between the input set and the sets included by the clause
+        int matches = 0;
+
+        // Go through the elements in the input set, one element at a time
+        for (int k = 0; k < X_number_of_indices; ++k) {
+            unsigned int element_chunk = X_indices[k] / 32;
+            unsigned int element_pos = X_indices[k] % 32;
+            
+            // Check whether the input element is an element in all of the sets included by the clause (a match)
+            unsigned int match = 1;
+            for (int l = 0; l < clause_bank_included_length[j]; ++l) {
+                unsigned int set = clause_bank_included[j*number_of_sets*2 + l*2];
+
+                if (sets[set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                    match = 0;
+                    break;
+                }
             }
+
+            matches += match;
         }
+
+        clause_output[j] = matches > 0;
     }
 }
 
