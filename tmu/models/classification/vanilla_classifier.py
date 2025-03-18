@@ -24,6 +24,7 @@ from tmu.util.statistics import MetricRecorder
 from tmu.weight_bank import WeightBank
 import numpy as np
 import logging
+import sys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             literal_sampling=1.0,
             feedback_rate_excluded_literals=1,
             literal_insertion_state=-1,
-            sets=None,
+            concept_sets=None,
             seed=None
     ):
         super().__init__(
@@ -93,7 +94,7 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             literal_sampling=literal_sampling,
             feedback_rate_excluded_literals=feedback_rate_excluded_literals,
             literal_insertion_state=literal_insertion_state,
-            sets=sets,
+            concept_sets=concept_sets,
             seed=seed
         )
         MultiClauseBankMixin.__init__(self, seed=seed)
@@ -144,6 +145,9 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             encoded_X_train: np.ndarray,
             sample_idx: int,
     ):
+        #print("Is Target ", is_target)
+        #sys.stdout.flush()
+
         clause_a = self.positive_clauses if is_target else self.negative_clauses
         clause_b = self.negative_clauses if is_target else self.positive_clauses
 
@@ -401,6 +405,19 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
         for sample_idx in sample_indices:
             target: int = Y[sample_idx]
             not_target: int | None = self.weight_banks.sample(exclude=[target])
+
+            #print("Sample:", sample_idx, X[sample_idx])
+            #print(self.concept_sets[0].indices)
+            #print("Overlap Concept 0", np.intersect1d(X[sample_idx].indices, self.concept_sets[0].indices))
+
+            #print(self.concept_sets[1].indices)
+            #print("Overlap Concept 1", np.intersect1d(X[sample_idx].indices, self.concept_sets[1].indices))
+            
+            #for i in range(X.shape[1]):
+            #    print("Overlap Concept", i, np.intersect1d(X[sample_idx].indices, self.concept_sets[i].indices))
+
+
+            sys.stdout.flush()
 
             history: dict = self._fit_sample(
                 target=target,

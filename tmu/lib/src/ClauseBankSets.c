@@ -74,6 +74,7 @@ void cbse_calculate_clause_outputs(
 
     // Evaluate each clause
     for (int j = 0; j < number_of_clauses; ++j) {
+        //printf("Clause %d\n", j);
         if (empty_clause_false && clause_bank_included_length[j] == 0) {
             clause_output[j] = 0;
             continue;
@@ -87,20 +88,30 @@ void cbse_calculate_clause_outputs(
             unsigned int element_chunk = input_set_indices[k] / 32;
             unsigned int element_pos = input_set_indices[k] % 32;
             
+            //printf("\tElement %d\n", input_set_indices[k]);
+
             // Check whether the input element is an element in all of the sets included by the clause (a match)
             unsigned int match = 1;
             for (int l = 0; l < clause_bank_included_length[j]; ++l) {
                 unsigned int concept_set = clause_bank_included[j*number_of_concept_sets*2 + l*2];
 
-                if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                //printf("\t\tConcept %d (%d)\n", concept_set, clause_bank_included[j*number_of_concept_sets*2 + l*2 + 1]);
+                if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) == 0) {
                     match = 0;
+                    //printf("\t\t\tMismatch\n");
                     break;
                 }
+                //printf("\t\t\tMatch\n");
             }
+
 
             matches += match;
         }
 
+        //printf("Matches %d\n", matches);
+
+        //fflush(stdout);
+        
         clause_output[j] = (matches > 0);
     }
 }
@@ -131,6 +142,8 @@ void cbse_type_i_feedback(
 
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {
+            //printf("Type I - skip clause %d %d %d\n", j, clause_output[j], clause_active[j]);
+            //fflush(stdout);
 			continue;
 		}
 
@@ -139,10 +152,18 @@ void cbse_type_i_feedback(
         if (clause_output[j] && (clause_bank_included_length[j] <= max_included_literals)) {
             // Clause True
 
-            // Set all the included concept sets as True
-            for (int l = 0; l < clause_bank_included_length[j]; ++l) {
-                unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
-                true_concept_sets[concept_set] = 1;
+            //printf("Type I - Clause %d True\n", j);
+
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                 int clause_included_pos = clause_pos_base + k*2;
+
+                 //printf("\tI: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+            }
+
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                 int clause_excluded_pos = clause_pos_base + k*2;
+
+                 //printf("\tE: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
             }
 
             // Calculate intersection of input and included sets...
@@ -157,7 +178,7 @@ void cbse_type_i_feedback(
                 for (int l = 0; l < clause_bank_included_length[j]; ++l) {
                     unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
 
-                    if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                    if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) == 0) {
                         match = 0;
                         break;
                     }
@@ -173,18 +194,34 @@ void cbse_type_i_feedback(
             for (int l = 0; l < clause_bank_excluded_length[j]; ++l) {
                 unsigned int concept_set = clause_bank_excluded[clause_pos_base + l*2];
 
+                //printf("Excluded concept set %d\n", concept_set);
                 true_concept_sets[concept_set] = 0;
                 for (int k = 0; k < input_set_number_of_indices; ++k) {
                     unsigned int element = input_set_indices[k];
                     unsigned int element_chunk = element / 32;
                     unsigned int element_pos = element % 32;
 
-                    if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) > 0) &&
-                        (set_intersection[element_chunk] & (1U << element_pos) > 0)) {
+                    // if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) {
+                    //     //printf("Match %d\n", element);
+                    //     //fflush(stdout);
+                    // }
+
+                    // //printf("%d ", element);
+                    if (((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) &&
+                        ((set_intersection[element_chunk] & (1U << element_pos)) > 0)) {
                         true_concept_sets[concept_set] = 1;
                         break;
                     }
                 }
+                // //printf("\n");
+            }
+
+            // Remove elements from set intersection
+            for (int k = 0; k < input_set_number_of_indices; ++k) {
+                unsigned int element_chunk = input_set_indices[k] / 32;
+                unsigned int element_pos = input_set_indices[k] % 32;
+
+                set_intersection[element_chunk] &= ~(1U << element_pos);
             }
 
             // Give Type I Feedback based on true_concept_sets
@@ -193,12 +230,8 @@ void cbse_type_i_feedback(
             for (int k = 0; k < clause_bank_included_length[j]; ++k) {
                 int clause_included_pos = clause_pos_base + k*2;
  
-                if (true_concept_sets[clause_bank_included[clause_included_pos]]) {
-                    if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
-                        clause_bank_included[clause_included_pos + 1] += 1;
-                    }
-                } else if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
-                    clause_bank_included[clause_included_pos + 1] -= 1;
+                if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
+                    //clause_bank_included[clause_included_pos + 1] += 1;
                 }
             }
 
@@ -249,17 +282,44 @@ void cbse_type_i_feedback(
                     clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
                 } 
             }
+
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                 int clause_included_pos = clause_pos_base + k*2;
+
+                 //printf("\t>>I: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+            }
+
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                 int clause_excluded_pos = clause_pos_base + k*2;
+
+                 //printf("\t>>E: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
+            }
+        
+            //fflush(stdout);
         } else {
             // Clause False
+
+            //printf("Type I - Clause %d False\n", j);
             
+
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                 int clause_included_pos = clause_pos_base + k*2;
+
+                 //printf("\tI: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+            }
+
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                 int clause_excluded_pos = clause_pos_base + k*2;
+
+                 //printf("\tE: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
+            }
+
             // Type Ib Feedback
 
             // Update state of included literals
             for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
                 int clause_excluded_pos = clause_pos_base + k*2;
-                unsigned int literal_chunk = clause_bank_excluded[clause_excluded_pos] / 32;
-                unsigned int literal_pos = clause_bank_excluded[clause_excluded_pos] % 32;
-
+               
                 if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
                     clause_bank_excluded[clause_excluded_pos + 1] -= 1;
                 }
@@ -268,8 +328,6 @@ void cbse_type_i_feedback(
             // Update state of excluded literals
             for (int k = 0; k < clause_bank_included_length[j]; ++k) {
                 int clause_included_pos = clause_pos_base + k*2;
-                unsigned int literal_chunk = clause_bank_included[clause_included_pos] / 32;
-                unsigned int literal_pos = clause_bank_included[clause_included_pos] % 32;
 
                 if (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s) {
                     clause_bank_included[clause_included_pos + 1] -= 1;
@@ -293,6 +351,20 @@ void cbse_type_i_feedback(
                     clause_bank_included[clause_included_pos + 1] = clause_bank_included[clause_included_end_pos + 1];
                 }  
             }
+
+            for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+                 int clause_included_pos = clause_pos_base + k*2;
+
+                 //printf("\t>>I: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+            }
+
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                 int clause_excluded_pos = clause_pos_base + k*2;
+
+                 //printf("\t>>E: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
+            }
+        
+            //fflush(stdout);
         }
     }
 }
@@ -320,10 +392,30 @@ void cbse_type_ii_feedback(
 
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((!clause_output[j]) || (((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {
+            //printf("Type II - skip clause %d %d\n", j, clause_output[j], clause_active[j]);
+            //fflush(stdout);
             continue;
         }
 
-        int clause_pos_base = j*number_of_concept_sets*2;   
+        int clause_pos_base = j*number_of_concept_sets*2;
+
+        //printf("Type II - Clause %d True\n", j);
+
+        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+             int clause_included_pos = clause_pos_base + k*2;
+
+             //printf("\tI: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+        }
+
+        for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+             int clause_excluded_pos = clause_pos_base + k*2;
+
+             //printf("\tE: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
+        }
+
+        for (int k = 0; k < number_of_concept_sets; ++k) {
+            true_concept_sets[k] = 0;
+        }
 
         // Set all the included concept sets as True
         for (int l = 0; l < clause_bank_included_length[j]; ++l) {
@@ -343,7 +435,7 @@ void cbse_type_ii_feedback(
             for (int l = 0; l < clause_bank_included_length[j]; ++l) {
                 unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
 
-                if (concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) == 0) {
+                if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) == 0) {
                     match = 0;
                     break;
                 }
@@ -365,13 +457,21 @@ void cbse_type_ii_feedback(
                 unsigned int element_chunk = element / 32;
                 unsigned int element_pos = element % 32;
 
-                if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos) > 0) &&
-                    (set_intersection[element_chunk] & (1U << element_pos) > 0)) {
+                if (((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) &&
+                    ((set_intersection[element_chunk] & (1U << element_pos)) > 0)) {
                     true_concept_sets[concept_set] = 1;
                     break;
                 }
             }
         }
+
+        // Remove elements from set intersection
+        for (int k = 0; k < input_set_number_of_indices; ++k) {
+            unsigned int element_chunk = input_set_indices[k] / 32;
+            unsigned int element_pos = input_set_indices[k] % 32;
+
+            set_intersection[element_chunk] &= ~(1U << element_pos);
+        } 
 
         // Type II Feedback
 
@@ -394,6 +494,20 @@ void cbse_type_ii_feedback(
                     clause_bank_excluded[clause_excluded_pos + 1] = clause_bank_excluded[clause_excluded_end_pos + 1];
                 }
 			}
-  		} 
+  		}
+
+        for (int k = 0; k < clause_bank_included_length[j]; ++k) {
+             int clause_included_pos = clause_pos_base + k*2;
+
+             //printf("\t>>I: %d (%d)\n", clause_bank_included[clause_included_pos], clause_bank_included[clause_included_pos + 1]);
+        }
+
+        for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+             int clause_excluded_pos = clause_pos_base + k*2;
+
+             //printf("\t>>E: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
+        }
+    
+        //fflush(stdout);
 	}
 }

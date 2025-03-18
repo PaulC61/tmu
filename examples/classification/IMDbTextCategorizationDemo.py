@@ -9,6 +9,7 @@ from tmu.models.classification.vanilla_classifier import TMClassifier
 from tmu.tools import BenchmarkTimer
 
 _LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def metrics(args):
     return dict(
@@ -22,7 +23,7 @@ def main(args):
     experiment_results = metrics(args)
 
     _LOGGER.info("Preparing dataset")
-    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from)
+    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from, maxlen=100)
     train_x, train_y = train
     test_x, test_y = test
 
@@ -64,6 +65,8 @@ def main(args):
     X_train = vectorizer_X.fit_transform(training_documents)
     Y_train = train_y.astype(np.uint32)
 
+    feature_names = vectorizer_X.get_feature_names_out()
+
     X_test = vectorizer_X.transform(testing_documents)
     Y_test = test_y.astype(np.uint32)
     _LOGGER.info("Producing bit representation... Done!")
@@ -84,7 +87,9 @@ def main(args):
         args.T, args.s,
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
-        clause_drop_p=args.clause_drop_p
+        clause_drop_p=args.clause_drop_p,
+        max_included_literals=32
+        #feature_negation=False
     )
 
     _LOGGER.info(f"Running {TMClassifier} for {args.epochs}")
@@ -102,6 +107,125 @@ def main(args):
 
         _LOGGER.info(f"Epoch: {epoch + 1}, Accuracy: {result:.2f}, Training Time: {benchmark1.elapsed():.2f}s, "
                      f"Testing Time: {benchmark2.elapsed():.2f}s")
+
+    np.set_printoptions(threshold=np.inf, linewidth=200, precision=2, suppress=True)
+
+    print("\nClass 0 Positive Clauses:\n")
+
+    precision = 100*tm.clause_precision(0, 0, X_test, Y_test)
+    recall = 100*tm.clause_recall(0, 0, X_test, Y_test)
+
+    for j in range(args.num_clauses//2):
+        print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 0, j), precision[j], recall[j]), end=' ')
+        l = []
+        for k in range(args.features*2):
+            if tm.get_ta_action(j, k, the_class = 0, polarity = 0):
+                if k < args.features:
+                    l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 0, polarity = 0)))
+                else:
+                    l.append("¬'%s'(%d)" % (feature_names[selected_features[k-args.features]], tm.get_ta_state(j, k, the_class = 0, polarity = 0)))
+        print(" ∧ ".join(l))
+
+    print("\nClass 0 Negative Clauses:\n")
+
+    precision = 100*tm.clause_precision(0, 1, X_test, Y_test)
+    recall = 100*tm.clause_recall(0, 1, X_test, Y_test)
+
+    for j in range(args.num_clauses//2):
+        print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 1, j), precision[j], recall[j]), end=' ')
+        l = []
+        for k in range(args.features*2):
+            if tm.get_ta_action(j, k, the_class = 0, polarity = 1):
+                if k < args.features:
+                    l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 0, polarity = 1)))
+                else:
+                    l.append("¬'%s'(%d)" % (feature_names[selected_features[k-args.features]], tm.get_ta_state(j, k, the_class = 0, polarity = 1)))
+        print(" ∧ ".join(l))
+
+    print("\nClass 1 Positive Clauses:\n")
+
+    precision = 100*tm.clause_precision(1, 0, X_test, Y_test)
+    recall = 100*tm.clause_recall(1, 0, X_test, Y_test)
+
+    print("Average Recall and Precision:", np.average(recall), np.average(precision))
+
+    for j in range(args.num_clauses//2):
+        print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 0, j), precision[j], recall[j]), end=' ')
+        l = []
+        for k in range(args.features*2):
+            if tm.get_ta_action(j, k, the_class = 1, polarity = 0):
+                if k < args.features:
+                    l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 1, polarity = 0)))
+                else:
+                    l.append("¬'%s'(%d)" % (feature_names[selected_features[k-args.features]], tm.get_ta_state(j, k, the_class = 1, polarity = 0)))
+        print(" ∧ ".join(l))
+
+    print("\nClass 1 Negative Clauses:\n")
+
+    precision = 100*tm.clause_precision(1, 1, X_test, Y_test)
+    recall = 100*tm.clause_recall(1, 1, X_test, Y_test)
+
+    print("Average Recall and Precision:", np.average(recall), np.average(precision))
+
+    for j in range(args.num_clauses//2):
+        print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 1, j), precision[j], recall[j]), end=' ')
+        l = []
+        for k in range(args.features*2):
+            if tm.get_ta_action(j, k, the_class = 1, polarity = 1):
+                if k < args.features:
+                    l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 1, polarity = 1)))
+                else:
+                    l.append("¬'%s'(%d)" % (feature_names[selected_features[k-args.features]], tm.get_ta_state(j, k, the_class = 1, polarity = 1)))
+        print(" ∧ ".join(l))
+
+
+    print("\nPositive Polarity:", end=' ')
+    literal_importance = tm.literal_importance(1, negated_features=False, negative_polarity=False).astype(np.int32)
+    sorted_literals = np.argsort(-1*literal_importance)[0:args.profile_size]
+    for k in sorted_literals:
+        if literal_importance[k] == 0:
+            break
+
+        #literal_precision = 100.0 - 100*Y_test[X_test[:,k] == 1].mean()
+        #literal_recall = 100*(1 - Y_test[X_test[:,k] == 1]).sum()/(1 - Y_test).sum()
+
+        literal_precision = 100*Y_test[X_test[:,k] == 1].mean()
+        literal_recall = 100*Y_test[X_test[:,k] == 1].sum()/Y_test.sum()
+
+        print("'%s'(%.2f/%.2f)"  % (feature_names[selected_features[k]], literal_precision, literal_recall), end=' ')
+
+    literal_importance = tm.literal_importance(1, negated_features=True, negative_polarity=False).astype(np.int32)
+    sorted_literals = np.argsort(-1*literal_importance)[0:args.profile_size]
+    for k in sorted_literals:
+        if literal_importance[k] == 0:
+            break
+
+        print("¬'" + feature_names[selected_features[k - args.features]] + "'", end=' ')
+
+    print()
+    print("\nNegative Polarity:", end=' ')
+    literal_importance = tm.literal_importance(1, negated_features=False, negative_polarity=True).astype(np.int32)
+    sorted_literals = np.argsort(-1*literal_importance)[0:args.profile_size]
+    for k in sorted_literals:
+        if literal_importance[k] == 0:
+            break
+
+        #literal_precision = 100*Y_test[X_test[:,k] == 1].mean()
+        #literal_recall = 100*Y_test[X_test[:,k] == 1].sum()/Y_test.sum()
+
+        literal_precision = 100.0 - 100*Y_test[X_test[:,k] == 1].mean()
+        literal_recall = 100*(1 - Y_test[X_test[:,k] == 1]).sum()/(1 - Y_test).sum()
+
+        print("'%s'(%.2f/%.2f)"  % (feature_names[selected_features[k]], literal_precision, literal_recall), end=' ')
+
+    literal_importance = tm.literal_importance(1, negated_features=True, negative_polarity=True).astype(np.int32)
+    sorted_literals = np.argsort(-1*literal_importance)[0:args.profile_size]
+    for k in sorted_literals:
+        if literal_importance[k] == 0:
+            break
+
+        print("¬'" + feature_names[selected_features[k - args.features]] + "'", end=' ')
+    print()
 
     return experiment_results
 

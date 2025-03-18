@@ -68,7 +68,6 @@ void cbse_type_i_feedback(
         unsigned int *clause_bank_excluded_length
 );
 
-
 void cbse_type_ii_feedback(
         float update_p,
         int number_of_clauses,
