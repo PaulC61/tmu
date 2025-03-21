@@ -88,7 +88,6 @@ def main(args):
     X_train = SKB.transform(X_train).astype(np.uint32)
     X_test = SKB.transform(X_test).astype(np.uint32)
 
-
     concepts = np.empty((selected_features.shape[0], selected_features.shape[0]), dtype=np.uint32)
     for i in range(selected_features.shape[0]):
         concepts[i,:] = 1
@@ -105,6 +104,7 @@ def main(args):
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
         clause_drop_p=args.clause_drop_p,
+        #max_included_literals=32,
         concept_sets=concepts_csr#csr_matrix([[1,8],[0,1],[15,128]])
     )
 
@@ -138,8 +138,8 @@ def main(args):
     for j in range(args.num_clauses//2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 0, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(args.features*2):
-            if tm.get_ta_action(j, k, the_class = 0, polarity = 0):
+        for k in range(args.features):
+            if not tm.get_ta_action(j, k, the_class = 0, polarity = 0):
                 if k < args.features:
                     l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 0, polarity = 0)))
                 else:
@@ -154,8 +154,8 @@ def main(args):
     for j in range(args.num_clauses//2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 1, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(args.features*2):
-            if tm.get_ta_action(j, k, the_class = 0, polarity = 1):
+        for k in range(args.features):
+            if not tm.get_ta_action(j, k, the_class = 0, polarity = 1):
                 if k < args.features:
                     l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 0, polarity = 1)))
                 else:
@@ -172,8 +172,8 @@ def main(args):
     for j in range(args.num_clauses//2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 0, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(args.features*2):
-            if tm.get_ta_action(j, k, the_class = 1, polarity = 0):
+        for k in range(args.features):
+            if not tm.get_ta_action(j, k, the_class = 1, polarity = 0):
                 if k < args.features:
                     l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 1, polarity = 0)))
                 else:
@@ -190,8 +190,8 @@ def main(args):
     for j in range(args.num_clauses//2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 1, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(args.features*2):
-            if tm.get_ta_action(j, k, the_class = 1, polarity = 1):
+        for k in range(args.features):
+            if not tm.get_ta_action(j, k, the_class = 1, polarity = 1):
                 if k < args.features:
                     l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 1, polarity = 1)))
                 else:

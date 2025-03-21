@@ -407,12 +407,7 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             not_target: int | None = self.weight_banks.sample(exclude=[target])
 
             #print("Sample:", sample_idx, X[sample_idx])
-            #print(self.concept_sets[0].indices)
-            #print("Overlap Concept 0", np.intersect1d(X[sample_idx].indices, self.concept_sets[0].indices))
-
-            #print(self.concept_sets[1].indices)
-            #print("Overlap Concept 1", np.intersect1d(X[sample_idx].indices, self.concept_sets[1].indices))
-            
+             
             #for i in range(X.shape[1]):
             #    print("Overlap Concept", i, np.intersect1d(X[sample_idx].indices, self.concept_sets[i].indices))
 

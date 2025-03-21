@@ -74,7 +74,7 @@ void cbse_calculate_clause_outputs(
 
     // Evaluate each clause
     for (int j = 0; j < number_of_clauses; ++j) {
-        //printf("Clause %d\n", j);
+        ////printf("Clause %d\n", j);
         if (empty_clause_false && clause_bank_included_length[j] == 0) {
             clause_output[j] = 0;
             continue;
@@ -88,7 +88,7 @@ void cbse_calculate_clause_outputs(
             unsigned int element_chunk = input_set_indices[k] / 32;
             unsigned int element_pos = input_set_indices[k] % 32;
             
-            //printf("\tElement %d\n", input_set_indices[k]);
+            ////printf("\tElement %d\n", input_set_indices[k]);
 
             // Check whether the input element is an element in all of the sets included by the clause (a match)
             unsigned int match = 1;
@@ -103,7 +103,6 @@ void cbse_calculate_clause_outputs(
                 }
                 //printf("\t\t\tMatch\n");
             }
-
 
             matches += match;
         }
@@ -140,9 +139,11 @@ void cbse_type_i_feedback(
 {
 	unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
 
+    update_p = 0.25;
+
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {
-            //printf("Type I - skip clause %d %d %d\n", j, clause_output[j], clause_active[j]);
+            //printf("Type I - skip clause %d %d %d\n", j, clause_output[j], !clause_active[j]);
             //fflush(stdout);
 			continue;
 		}
@@ -194,26 +195,18 @@ void cbse_type_i_feedback(
             for (int l = 0; l < clause_bank_excluded_length[j]; ++l) {
                 unsigned int concept_set = clause_bank_excluded[clause_pos_base + l*2];
 
-                //printf("Excluded concept set %d\n", concept_set);
                 true_concept_sets[concept_set] = 0;
                 for (int k = 0; k < input_set_number_of_indices; ++k) {
                     unsigned int element = input_set_indices[k];
                     unsigned int element_chunk = element / 32;
                     unsigned int element_pos = element % 32;
 
-                    // if ((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) {
-                    //     //printf("Match %d\n", element);
-                    //     //fflush(stdout);
-                    // }
-
-                    // //printf("%d ", element);
                     if (((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) &&
                         ((set_intersection[element_chunk] & (1U << element_pos)) > 0)) {
                         true_concept_sets[concept_set] = 1;
                         break;
                     }
                 }
-                // //printf("\n");
             }
 
             // Remove elements from set intersection
@@ -231,7 +224,7 @@ void cbse_type_i_feedback(
                 int clause_included_pos = clause_pos_base + k*2;
  
                 if (clause_bank_included[clause_included_pos + 1] < number_of_states-1 && (boost_true_positive_feedback || (((float)fast_rand())/((float)FAST_RAND_MAX) > 1.0/s))) {
-                    //clause_bank_included[clause_included_pos + 1] += 1;
+                    clause_bank_included[clause_included_pos + 1] += 1;
                 }
             }
 
@@ -317,15 +310,6 @@ void cbse_type_i_feedback(
             // Type Ib Feedback
 
             // Update state of included literals
-            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
-                int clause_excluded_pos = clause_pos_base + k*2;
-               
-                if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
-                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
-                }
-            }
-        
-            // Update state of excluded literals
             for (int k = 0; k < clause_bank_included_length[j]; ++k) {
                 int clause_included_pos = clause_pos_base + k*2;
 
@@ -334,6 +318,15 @@ void cbse_type_i_feedback(
                 }
             }
 
+            // Update state of excluded literals
+            for (int k = 0; k < clause_bank_excluded_length[j]; ++k) {
+                int clause_excluded_pos = clause_pos_base + k*2;
+               
+                if ((clause_bank_excluded[clause_excluded_pos + 1] > 1) && (((float)fast_rand())/((float)FAST_RAND_MAX) <= 1.0/s)) {
+                    clause_bank_excluded[clause_excluded_pos + 1] -= 1;
+                }
+            }
+        
             // Update lists
             int k = clause_bank_included_length[j];
             while (k--) {
@@ -390,9 +383,11 @@ void cbse_type_ii_feedback(
 {
     unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
 
+    update_p = 1.0;
+
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((!clause_output[j]) || (((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {
-            //printf("Type II - skip clause %d %d\n", j, clause_output[j], clause_active[j]);
+            //printf("Type II - skip clause %d %d %d\n", j, clause_output[j], !clause_active[j]);
             //fflush(stdout);
             continue;
         }
@@ -413,15 +408,6 @@ void cbse_type_ii_feedback(
              //printf("\tE: %d (%d)\n", clause_bank_excluded[clause_excluded_pos], clause_bank_excluded[clause_excluded_pos + 1]);
         }
 
-        for (int k = 0; k < number_of_concept_sets; ++k) {
-            true_concept_sets[k] = 0;
-        }
-
-        // Set all the included concept sets as True
-        for (int l = 0; l < clause_bank_included_length[j]; ++l) {
-            unsigned int concept_set = clause_bank_included[clause_pos_base + l*2];
-            true_concept_sets[concept_set] = 1;
-        }
 
         // Calculate intersection of input and included sets...
         // Go through the elements in the input set, one element at a time,
@@ -448,16 +434,21 @@ void cbse_type_ii_feedback(
 
         // Go through excluded concept sets and determine overlap with intersection of input and included concept sets
         // If there is an overlap, set the excluded concept set to True. Otherwise, set it to False
+
+        for (int k = 0; k < number_of_concept_sets; ++k) {
+            true_concept_sets[k] = 0;
+        }
+
         for (int l = 0; l < clause_bank_excluded_length[j]; ++l) {
             unsigned int concept_set = clause_bank_excluded[clause_pos_base + l*2];
 
-            true_concept_sets[concept_set] = 0;
             for (int k = 0; k < input_set_number_of_indices; ++k) {
                 unsigned int element = input_set_indices[k];
                 unsigned int element_chunk = element / 32;
                 unsigned int element_pos = element % 32;
 
-                if (((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) > 0) &&
+                // At least one miss is needed to reinforce inclusion (reasoning by elimination)
+                if (((concept_sets[concept_set*number_of_element_chunks + element_chunk] & (1U << element_pos)) == 0) &&
                     ((set_intersection[element_chunk] & (1U << element_pos)) > 0)) {
                     true_concept_sets[concept_set] = 1;
                     break;
@@ -479,7 +470,7 @@ void cbse_type_ii_feedback(
 		while (k--) {
 			int clause_excluded_pos = clause_pos_base + k*2;
 
-            if (!true_concept_sets[clause_bank_excluded[clause_excluded_pos]]) {
+            if (true_concept_sets[clause_bank_excluded[clause_excluded_pos]]) {
                 clause_bank_excluded[clause_excluded_pos + 1] += 1;
 
                 if (clause_bank_excluded[clause_excluded_pos + 1] >= number_of_states/2) {

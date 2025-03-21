@@ -88,8 +88,8 @@ def main(args):
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
         clause_drop_p=args.clause_drop_p,
-        max_included_literals=32
-        #feature_negation=False
+        max_included_literals=32,
+        feature_negation=False
     )
 
     _LOGGER.info(f"Running {TMClassifier} for {args.epochs}")
@@ -231,13 +231,13 @@ def main(args):
 
 def default_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_clauses", default=10000, type=int)
+    parser.add_argument("--num-clauses", default=10000, type=int)
     parser.add_argument("--T", default=8000, type=int)
     parser.add_argument("--s", default=2.0, type=float)
     parser.add_argument("--platform", default="GPU", type=str)
-    parser.add_argument("--weighted_clauses", default=True, type=bool)
+    parser.add_argument("--weighted-clauses", default=True, type=bool)
     parser.add_argument("--epochs", default=40, type=int)
-    parser.add_argument("--clause_drop_p", default=0.75, type=float)
+    parser.add_argument("--clause-drop-p", default=0.75, type=float)
     parser.add_argument("--max-ngram", default=2, type=int)
     parser.add_argument("--features", default=5000, type=int)
     parser.add_argument("--imdb-num-words", default=5000, type=int)
