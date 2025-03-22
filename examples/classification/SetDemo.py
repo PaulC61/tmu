@@ -5,7 +5,7 @@ from tmu.models.classification.vanilla_classifier import TMClassifier
 import numpy as np
 
 def main(args):
-    concepts = np.empty((3, args.number_of_features), dtype=np.uint32)
+    concepts = np.empty((3 + args.number_of_features, args.number_of_features), dtype=np.uint32)
     concepts[0,:args.number_of_features//2+args.overlap//2] = 1
     concepts[0,args.number_of_features//2+args.overlap//2:] = 0
     print(concepts[0])
@@ -16,7 +16,12 @@ def main(args):
 
     concepts[2] = np.maximum(concepts[0] - np.minimum(concepts[0], concepts[1]), concepts[1] - np.minimum(concepts[0], concepts[1]))
     print(concepts[2])
-    
+
+    for i in range(args.number_of_features):
+        concepts[i+3,:] = 1
+        concepts[i+3,i] = 0 
+
+    common = (1 - concepts[2]).nonzero()[0]
     class_0 = np.intersect1d(concepts[0].nonzero()[0], concepts[2].nonzero()[0])
     class_1 = np.intersect1d(concepts[1].nonzero()[0], concepts[2].nonzero()[0])
 
@@ -41,9 +46,11 @@ def main(args):
         Y_train[i] = np.random.randint(2)
         if Y_train[i] == 1:
             X_train[i,np.random.choice(class_1)] = 1
+            X_train[i,np.random.choice(common)] = 1
             #print(X_train[i,:])
         else:
             X_train[i,np.random.choice(class_0)] = 1
+            X_train[i,np.random.choice(common)] = 1
             #print(X_train[i,:])
 
     Y_train = np.where(np.random.rand(args.number_of_examples) <= args.noise, 1 - Y_train, Y_train)  # Adds noise
@@ -55,8 +62,10 @@ def main(args):
         #X_test[i,np.random.choice(concepts[Y_test[i],:].nonzero()[0])] = 1
         if Y_test[i] == 1:
             X_test[i,np.random.choice(class_1)] = 1
+            X_test[i,np.random.choice(common)] = 1
         else:
             X_test[i,np.random.choice(class_0)] = 1
+            X_test[i,np.random.choice(common)] = 1
 
     tm = TMClassifier(args.number_of_clauses, args.T, args.s, weighted_clauses=True, platform=args.platform, concept_sets=csr_matrix(concepts))
 
