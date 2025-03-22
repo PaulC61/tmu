@@ -4,16 +4,14 @@ from scipy.sparse import csr_matrix
 from tmu.models.classification.vanilla_classifier import TMClassifier
 import numpy as np
 
-overlap = 4
-
 def main(args):
     concepts = np.empty((3, args.number_of_features), dtype=np.uint32)
-    concepts[0,:args.number_of_features//2+overlap//2] = 1
-    concepts[0,args.number_of_features//2+overlap//2:] = 0
+    concepts[0,:args.number_of_features//2+args.overlap//2] = 1
+    concepts[0,args.number_of_features//2+args.overlap//2:] = 0
     print(concepts[0])
 
-    concepts[1,:args.number_of_features//2-overlap//2] = 0
-    concepts[1,args.number_of_features//2-overlap//2:] = 1
+    concepts[1,:args.number_of_features//2-args.overlap//2] = 0
+    concepts[1,args.number_of_features//2-args.overlap//2:] = 1
     print(concepts[1])
 
     concepts[2] = np.maximum(concepts[0] - np.minimum(concepts[0], concepts[1]), concepts[1] - np.minimum(concepts[0], concepts[1]))
@@ -150,6 +148,7 @@ def default_args(**kwargs):
     parser.add_argument("--T", default=80, type=int)
     parser.add_argument("--s", default=1.0, type=float)
     parser.add_argument("--number-of-features", default=20, type=int)
+    parser.add_argument("--overlap", default=10, type=int)
     parser.add_argument("--noise", default=0.1, type=float, help="Noisy XOR")
     args = parser.parse_args()
     for key, value in kwargs.items():
