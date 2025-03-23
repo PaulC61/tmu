@@ -140,7 +140,7 @@ def default_args(**kwargs):
     parser.add_argument("--platform", default='CPU_sets', type=str)
     parser.add_argument("--T", default=80, type=int)
     parser.add_argument("--s", default=1.0, type=float)
-    parser.add_argument("--number-of-features", default=20, type=int)
+    parser.add_argument("--number-of-features", default=100, type=int)
     parser.add_argument("--overlap", default=10, type=int)
     parser.add_argument("--noise", default=0.1, type=float, help="Noisy XOR")
     args = parser.parse_args()
