@@ -5,7 +5,6 @@ from tmu.models.classification.vanilla_classifier import TMClassifier
 import numpy as np
 
 def main(args):
-    #concepts = np.empty((3 + args.number_of_features, args.number_of_features), dtype=np.uint32)
     concepts = np.empty((3, args.number_of_features), dtype=np.uint32)
     concepts[0,:args.number_of_features//2+args.overlap//2] = 1
     concepts[0,args.number_of_features//2+args.overlap//2:] = 0
@@ -18,28 +17,12 @@ def main(args):
     concepts[2] = np.maximum(concepts[0] - np.minimum(concepts[0], concepts[1]), concepts[1] - np.minimum(concepts[0], concepts[1]))
     print(concepts[2])
 
-    # for i in range(args.number_of_features):
-    #     concepts[i+3,:] = 1
-    #     concepts[i+3,i] = 0 
-
     common = (1 - concepts[2]).nonzero()[0]
     class_0 = np.intersect1d(concepts[0].nonzero()[0], concepts[2].nonzero()[0])
     class_1 = np.intersect1d(concepts[1].nonzero()[0], concepts[2].nonzero()[0])
 
     print(class_0)
     print(class_1)
-
-    # concepts[3,:args.number_of_features//2-1] = 0
-    # concepts[3,args.number_of_features//2-1:] = 1
-    # print(concepts[1])
-
-    # concepts[2,:] = 1
-    # concepts[2,args.number_of_features//2] = 0
-    # print(concepts[2])
-
-    # concepts[3,:] = 1
-    # concepts[3,args.number_of_features//2-1] = 0
-    # print(concepts[3])
 
     X_train = np.zeros((args.number_of_examples, args.number_of_features), dtype=np.uint32)
     Y_train = np.empty(args.number_of_examples, dtype=np.uint32)
@@ -151,7 +134,7 @@ def main(args):
 
 def default_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", default=250, type=int)
+    parser.add_argument("--epochs", default=10, type=int)
     parser.add_argument("--number-of-examples", default=10000, type=int)
     parser.add_argument("--number-of-clauses", default=10, type=int)
     parser.add_argument("--platform", default='CPU_sets', type=str)
