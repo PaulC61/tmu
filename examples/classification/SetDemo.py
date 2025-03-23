@@ -5,7 +5,8 @@ from tmu.models.classification.vanilla_classifier import TMClassifier
 import numpy as np
 
 def main(args):
-    concepts = np.empty((3 + args.number_of_features, args.number_of_features), dtype=np.uint32)
+    #concepts = np.empty((3 + args.number_of_features, args.number_of_features), dtype=np.uint32)
+    concepts = np.empty((3, args.number_of_features), dtype=np.uint32)
     concepts[0,:args.number_of_features//2+args.overlap//2] = 1
     concepts[0,args.number_of_features//2+args.overlap//2:] = 0
     print(concepts[0])
@@ -17,9 +18,9 @@ def main(args):
     concepts[2] = np.maximum(concepts[0] - np.minimum(concepts[0], concepts[1]), concepts[1] - np.minimum(concepts[0], concepts[1]))
     print(concepts[2])
 
-    for i in range(args.number_of_features):
-        concepts[i+3,:] = 1
-        concepts[i+3,i] = 0 
+    # for i in range(args.number_of_features):
+    #     concepts[i+3,:] = 1
+    #     concepts[i+3,i] = 0 
 
     common = (1 - concepts[2]).nonzero()[0]
     class_0 = np.intersect1d(concepts[0].nonzero()[0], concepts[2].nonzero()[0])
