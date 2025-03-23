@@ -29,13 +29,13 @@ def main(args):
     for i in range(args.number_of_examples):
         Y_train[i] = np.random.randint(2)
         if Y_train[i] == 1:
-            X_train[i,np.random.choice(class_1)] = 1
-            X_train[i,np.random.choice(common)] = 1
-            #print(X_train[i,:])
+            for j in range(5):
+                X_train[i,np.random.choice(class_1)] = 1
+                X_train[i,np.random.choice(common)] = 1
         else:
-            X_train[i,np.random.choice(class_0)] = 1
-            X_train[i,np.random.choice(common)] = 1
-            #print(X_train[i,:])
+            for j in range(5):
+                X_train[i,np.random.choice(class_0)] = 1
+                X_train[i,np.random.choice(common)] = 1
 
     Y_train = np.where(np.random.rand(args.number_of_examples) <= args.noise, 1 - Y_train, Y_train)  # Adds noise
 
@@ -43,13 +43,15 @@ def main(args):
     Y_test = np.empty(args.number_of_examples, dtype=np.uint32)
     for i in range(args.number_of_examples):
         Y_test[i] = np.random.randint(2)
-        #X_test[i,np.random.choice(concepts[Y_test[i],:].nonzero()[0])] = 1
+
         if Y_test[i] == 1:
-            X_test[i,np.random.choice(class_1)] = 1
-            X_test[i,np.random.choice(common)] = 1
+            for j in range(5):
+                X_test[i,np.random.choice(class_1)] = 1
+                X_test[i,np.random.choice(common)] = 1
         else:
-            X_test[i,np.random.choice(class_0)] = 1
-            X_test[i,np.random.choice(common)] = 1
+            for j in range(5):
+                X_test[i,np.random.choice(class_0)] = 1
+                X_test[i,np.random.choice(common)] = 1
 
     tm = TMClassifier(args.number_of_clauses, args.T, args.s, weighted_clauses=True, platform=args.platform, concept_sets=csr_matrix(concepts))
 
