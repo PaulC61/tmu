@@ -88,24 +88,28 @@ def main(args):
     X_train = SKB.transform(X_train).astype(np.uint32)
     X_test = SKB.transform(X_test).astype(np.uint32)
 
-    concepts = np.empty((selected_features.shape[0], selected_features.shape[0]), dtype=np.uint32)
+    number_of_projections = 0
+    concepts = np.empty((selected_features.shape[0] + number_of_projections, selected_features.shape[0]), dtype=np.uint32)
     for i in range(selected_features.shape[0]):
         concepts[i,:] = 1
         concepts[i,i] = 0
+
+    for i in range(selected_features.shape[0], selected_features.shape[0]+number_of_projections):
+        concepts[i,:] = np.random.randint(2, size=selected_features.shape[0], dtype=np.uint32)
 
     concepts_csr = csr_matrix(concepts)
 
     _LOGGER.info("Selecting Features.... Done!")
 
     tm = TMClassifier(
-        args.num_clauses,
+        args.number_of_clauses,
         args.T,
         args.s,
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
         clause_drop_p=args.clause_drop_p,
         #max_included_literals=32,
-        concept_sets=concepts_csr#csr_matrix([[1,8],[0,1],[15,128]])
+        concept_sets=concepts_csr
     )
 
     for e in range(args.epochs):
@@ -251,15 +255,15 @@ def main(args):
 
 def default_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num-clauses", default=10, type=int)
+    parser.add_argument("--number-of-clauses", default=10, type=int)
     parser.add_argument("--T", default=100, type=int)
     parser.add_argument("--s", default=1.0, type=float)
     parser.add_argument("--platform", default="CPU_sets", type=str)
     parser.add_argument("--weighted-clauses", default=True, type=bool)
-    parser.add_argument("--epochs", default=60, type=int)
+    parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--clause-drop-p", default=0.0, type=float)
-    parser.add_argument("--max-ngram", default=1, type=int)
-    parser.add_argument("--features", default=1000, type=int)
+    parser.add_argument("--max-ngram", default=2, type=int)
+    parser.add_argument("--features", default=5000, type=int)
     parser.add_argument("--imdb-num-words", default=10000, type=int)
     parser.add_argument("--imdb-index-from", default=2, type=int)
     args = parser.parse_args()

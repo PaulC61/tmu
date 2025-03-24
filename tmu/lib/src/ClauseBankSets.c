@@ -111,7 +111,8 @@ void cbse_calculate_clause_outputs(
 
         //fflush(stdout);
         
-        clause_output[j] = matches;//(matches > 0);
+        clause_output[j] = (matches > 0);
+        //clause_output[j] = matches;
     }
 }
 
