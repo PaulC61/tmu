@@ -85,7 +85,7 @@ def main(args):
     for j in range(args.number_of_clauses // 2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 1, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(4):
+        for k in range(3):
             if tm.get_ta_action(j, k, the_class=0, polarity=1):
                 if k < args.number_of_features:
                     l.append(" x%d(%d)" % (k, tm.get_ta_state(j, k, the_class=0, polarity=1)))
@@ -101,7 +101,7 @@ def main(args):
     for j in range(args.number_of_clauses // 2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 0, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(4):
+        for k in range(3):
             if tm.get_ta_action(j, k, the_class=1, polarity=0):
                 if k < args.number_of_features:
                     l.append(" x%d(%d)" % (k, tm.get_ta_state(j, k, the_class=1, polarity=0)))
@@ -117,7 +117,7 @@ def main(args):
     for j in range(args.number_of_clauses // 2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(1, 1, j), precision[j], recall[j]), end=' ')
         l = []
-        for k in range(4):
+        for k in range(3):
             if tm.get_ta_action(j, k, the_class=1, polarity=1):
                 if k < args.number_of_features:
                     l.append(" x%d(%d)" % (k, tm.get_ta_state(j, k, the_class=1, polarity=1)))
@@ -140,7 +140,7 @@ def default_args(**kwargs):
     parser.add_argument("--number-of-examples", default=10000, type=int)
     parser.add_argument("--number-of-clauses", default=10, type=int)
     parser.add_argument("--platform", default='CPU_sets', type=str)
-    parser.add_argument("--T", default=80, type=int)
+    parser.add_argument("--T", default=8, type=int)
     parser.add_argument("--s", default=1.0, type=float)
     parser.add_argument("--number-of-features", default=100, type=int)
     parser.add_argument("--overlap", default=10, type=int)
