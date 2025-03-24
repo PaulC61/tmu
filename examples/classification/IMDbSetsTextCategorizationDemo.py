@@ -255,7 +255,7 @@ def main(args):
 
 def default_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--number-of-clauses", default=10, type=int)
+    parser.add_argument("--number-of-clauses", default=100, type=int)
     parser.add_argument("--T", default=100, type=int)
     parser.add_argument("--s", default=1.5, type=float)
     parser.add_argument("--platform", default="CPU_sets", type=str)
