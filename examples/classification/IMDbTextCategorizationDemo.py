@@ -240,7 +240,7 @@ def default_args(**kwargs):
     parser.add_argument("--clause-drop-p", default=0.0, type=float)
     parser.add_argument("--max-ngram", default=2, type=int)
     parser.add_argument("--features", default=5000, type=int)
-    parser.add_argument("--imdb-num-words", default=5000, type=int)
+    parser.add_argument("--imdb-num-words", default=10000, type=int)
     parser.add_argument("--imdb-index-from", default=2, type=int)
     args = parser.parse_args()
     for key, value in kwargs.items():

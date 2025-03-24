@@ -72,6 +72,8 @@ def main(args):
     X_train = vectorizer_X.fit_transform(training_documents)
     Y_train = train_y.astype(np.uint32)
 
+    print(Y_train.shape[0])
+
     feature_names = vectorizer_X.get_feature_names_out()
 
     X_test = vectorizer_X.transform(testing_documents)
