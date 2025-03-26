@@ -99,6 +99,8 @@ class TMBaseModel:
             absorbing_exclude=None,
             squared_weight_update_p=False,
             concept_sets=None,
+            min_update_p=0.0,
+            match_count=0,
             seed=None
     ):
         self.seed = seed
@@ -109,6 +111,8 @@ class TMBaseModel:
         self.T = int(T)
         self.s = s
         self.concept_sets = concept_sets
+        self.min_update_p = min_update_p
+        self.match_count = match_count
         
         self.confidence_driven_updating = confidence_driven_updating
         self.type_i_ii_ratio = type_i_ii_ratio
@@ -301,6 +305,7 @@ class TMBaseModel:
             number_of_states=2 ** self.number_of_state_bits_ta,
             patch_dim=self.patch_dim,
             type_ia_ii_feedback_ratio=self.type_ia_ii_feedback_ratio,
+            match_count=self.match_count,
             seed=self.seed,
         )
         return clause_bank_type, clause_bank_args

@@ -113,6 +113,7 @@ class ClauseBankSets(BaseClauseBank):
             self.ptr_clause_output,
             self.ptr_clause_bank_included,
             self.ptr_clause_bank_included_length,
+            self.match_count,
             1
         )
  
@@ -129,6 +130,7 @@ class ClauseBankSets(BaseClauseBank):
             self.ptr_clause_output,
             self.ptr_clause_bank_included,
             self.ptr_clause_bank_included_length,
+            self.match_count,
             0
         )
 

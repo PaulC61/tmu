@@ -62,6 +62,8 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             feedback_rate_excluded_literals=1,
             literal_insertion_state=-1,
             concept_sets=None,
+            min_update_p=0.0,
+            match_count=0,
             seed=None
     ):
         super().__init__(
@@ -95,6 +97,8 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             feedback_rate_excluded_literals=feedback_rate_excluded_literals,
             literal_insertion_state=literal_insertion_state,
             concept_sets=concept_sets,
+            min_update_p=min_update_p,
+            match_count=match_count,
             seed=seed
         )
         MultiClauseBankMixin.__init__(self, seed=seed)
@@ -236,12 +240,12 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
     ) -> float:
         # Confidence-driven updating method
         if self.confidence_driven_updating:
-            return (self.T - abs(class_sum)) / self.T
+            return max(self.min_update_p, (self.T - abs(class_sum)) / self.T)
 
         # Compute based on whether the class is the target or not
         if is_target:
-            return (self.T - class_sum) / (2 * self.T)
-        return (self.T + class_sum) / (2 * self.T)
+            return max(self.min_update_p,(self.T - class_sum) / (2 * self.T))
+        return max(self.min_update_p, (self.T + class_sum) / (2 * self.T))
 
     def mechanism_literal_active(self) -> np.ndarray:
         # Literals are dropped based on literal drop probability
@@ -411,8 +415,7 @@ class TMClassifier(TMBaseModel, MultiClauseBankMixin, MultiWeightBankMixin):
             #for i in range(X.shape[1]):
             #    print("Overlap Concept", i, np.intersect1d(X[sample_idx].indices, self.concept_sets[i].indices))
 
-
-            sys.stdout.flush()
+            #sys.stdout.flush()
 
             history: dict = self._fit_sample(
                 target=target,
