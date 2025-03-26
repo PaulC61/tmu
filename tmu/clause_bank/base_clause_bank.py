@@ -21,6 +21,7 @@ class BaseClauseBank(CFFISerializable):
             number_of_clauses: int,
             max_included_literals: int,
             patch_dim: typing.Union[tuple, None],
+            match_count : bool,
             **kwargs
     ):
         self._warn_unknown_arguments(**kwargs)
@@ -51,6 +52,8 @@ class BaseClauseBank(CFFISerializable):
         if self.patch_dim is None:
             self.patch_dim = (self.dim[0] * self.dim[1] * self.dim[2], 1)
 
+        self.match_count = match_count
+        
         self.number_of_features = int(
             self.patch_dim[0] * self.patch_dim[1] * self.dim[2] + (self.dim[0] - self.patch_dim[0]) + (
                     self.dim[1] - self.patch_dim[1]))

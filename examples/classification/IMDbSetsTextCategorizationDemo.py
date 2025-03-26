@@ -29,7 +29,7 @@ def main(args):
     experiment_results = metrics(args)
 
     _LOGGER.info("Preparing dataset")
-    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from, maxlen=100)
+    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from)#, maxlen=100)
     train_x, train_y = train
     test_x, test_y = test
 
@@ -103,6 +103,7 @@ def main(args):
 
     _LOGGER.info("Selecting Features.... Done!")
 
+    print(args.boost_true_positive_feedback, args.min_update_p)
     tm = TMClassifier(
         args.number_of_clauses,
         args.T,
@@ -111,7 +112,10 @@ def main(args):
         weighted_clauses=args.weighted_clauses,
         clause_drop_p=args.clause_drop_p,
         #max_included_literals=32,
-        concept_sets=concepts_csr
+        concept_sets=concepts_csr,
+        boost_true_positive_feedback=args.boost_true_positive_feedback,
+        min_update_p=args.min_update_p,
+        match_count = args.match_count
     )
 
     for e in range(args.epochs):
@@ -264,10 +268,13 @@ def default_args(**kwargs):
     parser.add_argument("--weighted-clauses", default=True, type=bool)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--clause-drop-p", default=0.0, type=float)
+    parser.add_argument("--min-update-p", default=0.0, type=float)
     parser.add_argument("--max-ngram", default=2, type=int)
     parser.add_argument("--features", default=5000, type=int)
     parser.add_argument("--imdb-num-words", default=10000, type=int)
     parser.add_argument("--imdb-index-from", default=2, type=int)
+    parser.add_argument('--boost-true-positive-feedback', action='store_true')
+    parser.add_argument('--match-count', action='store_true')
     args = parser.parse_args()
     for key, value in kwargs.items():
         if key in args.__dict__:

@@ -67,6 +67,7 @@ void cbse_calculate_clause_outputs(
         unsigned int *clause_output,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
+        unsigned int match_count,
         unsigned int empty_clause_false
 )
 {
@@ -111,8 +112,11 @@ void cbse_calculate_clause_outputs(
 
         //fflush(stdout);
         
-        //clause_output[j] = (matches > 0);
-        clause_output[j] = matches;
+        if (match_count) {
+            clause_output[j] = matches;
+        } else {
+            clause_output[j] = (matches > 0);
+        }
     }
 }
 
@@ -383,8 +387,6 @@ void cbse_type_ii_feedback(
 )
 {
     unsigned int number_of_element_chunks = (number_of_elements-1)/32 + 1;
-
-    //update_p = 1.0;
 
     for (int j = 0; j < number_of_clauses; ++j) {
         if ((!clause_output[j]) || (((float)fast_rand())/((float)FAST_RAND_MAX) > update_p) || (!clause_active[j])) {

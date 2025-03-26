@@ -43,6 +43,7 @@ void cbse_calculate_clause_outputs(
         unsigned int *clause_output,
         unsigned int *clause_bank_included,
         unsigned int *clause_bank_included_length,
+        unsigned int match_count,
         unsigned int empty_clause_false
 );
 
