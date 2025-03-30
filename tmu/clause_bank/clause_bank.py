@@ -152,8 +152,6 @@ class ClauseBank(BaseClauseBank):
         self.clause_bank_ind = np.ascontiguousarray(self.clause_bank_ind.reshape(
             (self.number_of_clauses * self.number_of_ta_chunks * self.number_of_state_bits_ind)))
 
-
-
         self.incremental_clause_evaluation_initialized = False
 
     def calculate_clause_outputs_predict(self, encoded_X, e):
@@ -166,6 +164,7 @@ class ClauseBank(BaseClauseBank):
                 self.number_of_literals,
                 self.number_of_state_bits_ta,
                 self.number_of_patches,
+                self.ptr_patch_match_count,
                 self.co_p,
                 xi_p
             )

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2022 Ole-Christoffer Granmo
+Copyright (c) 2025 Ole-Christoffer Granmo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -244,7 +244,14 @@ static inline void cb_calculate_clause_output_patchwise(unsigned int *ta_state, 
 	return;
 }
 
-static inline unsigned int cb_calculate_clause_output_predict(unsigned int *ta_state, int number_of_ta_chunks, int number_of_state_bits, unsigned int filter, int number_of_patches, unsigned int *Xi)
+static inline unsigned int cb_calculate_clause_output_predict(
+	unsigned int *ta_state,
+	int number_of_ta_chunks,
+	int number_of_state_bits,
+	unsigned int filter,
+	int number_of_patches,
+	unsigned int *Xi
+)
 {
 	for (int patch = 0; patch < number_of_patches; ++patch) {
 		unsigned int output = 1;
@@ -523,6 +530,7 @@ void cb_calculate_clause_outputs_predict(
         int number_of_literals,
         int number_of_state_bits,
         int number_of_patches,
+        unsigned int *patch_match_count,
         unsigned int *clause_output,
         unsigned int *Xi
 )

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2021 Ole-Christoffer Granmo
+Copyright (c) 2025 Ole-Christoffer Granmo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -80,6 +80,7 @@ void cb_calculate_clause_outputs_predict(
     int number_of_literals,
     int number_of_state_bits,
     int number_of_patches,
+    unsigned int *patch_match_count,
     unsigned int *clause_output,
     unsigned int *Xi
 );
