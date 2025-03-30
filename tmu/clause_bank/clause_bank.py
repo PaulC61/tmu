@@ -63,6 +63,7 @@ class ClauseBank(BaseClauseBank):
         self.clause_output_patchwise = np.empty(self.number_of_clauses * self.number_of_patches, dtype=np.uint32, order="c")
         self.feedback_to_ta = np.empty(self.number_of_ta_chunks, dtype=np.uint32, order="c")
         self.output_one_patches = np.empty(self.number_of_patches, dtype=np.uint32, order="c")
+        self.patch_match_count = np.empty(self.number_of_patches, dtype=np.uint32, order="c")
         self.literal_clause_count = np.empty(self.number_of_literals, dtype=np.uint32, order="c")
 
 
@@ -109,6 +110,7 @@ class ClauseBank(BaseClauseBank):
         self.cop_p = ffi.cast("unsigned int *", self.clause_output_patchwise.ctypes.data)  # clause_output_patchwise
         self.ptr_feedback_to_ta = ffi.cast("unsigned int *", self.feedback_to_ta.ctypes.data)  # feedback_to_ta
         self.ptr_output_one_patches = ffi.cast("unsigned int *", self.output_one_patches.ctypes.data)  # output_one_patches
+        self.ptr_patch_match_count = ffi.cast("unsigned int *", self.patch_match_count.ctypes.data)  # output_one_patches
         self.ptr_literal_clause_count = ffi.cast("unsigned int *", self.literal_clause_count.ctypes.data)  # literal_clause_count
         self.tiafc_p = ffi.cast("unsigned int *", self.type_ia_feedback_counter.ctypes.data)  # literal_clause_count
 
