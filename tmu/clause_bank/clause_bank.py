@@ -157,7 +157,7 @@ class ClauseBank(BaseClauseBank):
     def calculate_clause_outputs_predict(self, encoded_X, e):
         xi_p = ffi.cast("unsigned int *", encoded_X[e, :].ctypes.data)
 
-        if not self.incremental:
+        if True or not self.incremental:
             lib.cb_calculate_clause_outputs_predict(
                 self.ptr_ta_state,
                 self.number_of_clauses,
@@ -215,6 +215,7 @@ class ClauseBank(BaseClauseBank):
             self.number_of_patches,
             self.co_p,
             la_p,
+            self.ptr_patch_match_count,
             xi_p
         )
 
@@ -261,6 +262,7 @@ class ClauseBank(BaseClauseBank):
             self.max_included_literals,
             ptr_clause_active,
             ptr_literal_active,
+            self.ptr_patch_match_count,
             ptr_xi
         )
 
@@ -288,6 +290,7 @@ class ClauseBank(BaseClauseBank):
             update_p,
             ptr_clause_active,
             ptr_literal_active,
+            self.ptr_patch_match_count,
             ptr_xi
         )
 

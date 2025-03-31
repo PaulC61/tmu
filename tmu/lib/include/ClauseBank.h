@@ -40,6 +40,7 @@ void cb_type_i_feedback(
     unsigned int max_included_literals,
     unsigned int *clause_active,
     unsigned int *literal_active,
+    unsigned int *patch_match_count,
     unsigned int *Xi
 );
 
@@ -53,6 +54,7 @@ void cb_type_ii_feedback(
     float update_p,
     unsigned int *clause_active,
     unsigned int *literal_active,
+    unsigned int *patch_match_count,
     unsigned int *Xi
 );
 
@@ -93,6 +95,7 @@ void cb_calculate_clause_outputs_update(
     int number_of_patches,
     unsigned int *clause_output,
     unsigned int *literal_active,
+    unsigned int *patch_match_count,
     unsigned int *Xi
 );
 
