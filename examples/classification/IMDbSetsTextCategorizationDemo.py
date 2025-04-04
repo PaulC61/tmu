@@ -29,7 +29,7 @@ def main(args):
     experiment_results = metrics(args)
 
     _LOGGER.info("Preparing dataset")
-    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from)#, maxlen=100)
+    train, test = keras.datasets.imdb.load_data(num_words=args.imdb_num_words, index_from=args.imdb_index_from, maxlen=100)
     train_x, train_y = train
     test_x, test_y = test
 
@@ -90,13 +90,12 @@ def main(args):
     X_train = SKB.transform(X_train).astype(np.uint32)
     X_test = SKB.transform(X_test).astype(np.uint32)
 
-    number_of_projections = 0
-    concepts = np.empty((selected_features.shape[0] + number_of_projections, selected_features.shape[0]), dtype=np.uint32)
+    concepts = np.empty((selected_features.shape[0] + args.number_of_random_projections, selected_features.shape[0]), dtype=np.uint32)
     for i in range(selected_features.shape[0]):
         concepts[i,:] = 1
         concepts[i,i] = 0
 
-    for i in range(selected_features.shape[0], selected_features.shape[0]+number_of_projections):
+    for i in range(selected_features.shape[0], selected_features.shape[0]+args.number_of_random_projections):
         concepts[i,:] = np.random.randint(2, size=selected_features.shape[0], dtype=np.uint32)
 
     concepts_csr = csr_matrix(concepts)
@@ -111,7 +110,7 @@ def main(args):
         platform=args.platform,
         weighted_clauses=args.weighted_clauses,
         clause_drop_p=args.clause_drop_p,
-        #max_included_literals=32,
+        max_included_literals=args.max_included_literals,
         concept_sets=concepts_csr,
         boost_true_positive_feedback=args.boost_true_positive_feedback,
         min_update_p=args.min_update_p,
@@ -140,10 +139,27 @@ def main(args):
 
         np.set_printoptions(threshold=np.inf, linewidth=200, precision=2, suppress=True)
 
-    print("\nClass 0 Positive Clauses:\n")
+        print("\nClass 0 Positive Clauses:\n")
 
-    precision = 100*tm.clause_precision(0, 0, X_test, Y_test)
-    recall = 100*tm.clause_recall(0, 0, X_test, Y_test)
+        precision = 100*tm.clause_precision(0, 0, X_test, Y_test)
+        recall = 100*tm.clause_recall(0, 0, X_test, Y_test)
+
+        print("Average Recall and Precision:", np.average(recall), np.average(precision))
+
+        for j in range(args.number_of_clauses//2):
+            print("Clause #%d W:%d P:%.2f R:%.2f I:%d" % (j, tm.get_weight(0, 0, j), precision[j], recall[j], tm.number_of_include_actions(0, j)))#, end=' ')
+            # clause_intersection = np.ones(args.features, dtype=np.uint32)
+            # for k in range(args.features+args.number_of_random_projections):
+            #     if tm.get_ta_action(j, k, the_class = 0, polarity = 0):
+            #         clause_intersection = np.logical_and(clause_intersection, concepts[k,:])
+
+            # l = []
+            # for word_index in clause_intersection.nonzero()[0]:
+            #     l.append("'%s'" % (feature_names[selected_features[word_index]]))
+            #         # l.append(" '%s'(%d)" % (feature_names[selected_features[k]], tm.get_ta_state(j, k, the_class = 0, polarity = 0)))
+            #         #l.append("x%d(%d)" % (k, tm.get_ta_state(j, k, the_class = 0, polarity = 0)))
+            # print(" ∨ ".join(l))
+
 
     for j in range(args.num_clauses//2):
         print("Clause #%d W:%d P:%.2f R:%.2f " % (j, tm.get_weight(0, 0, j), precision[j], recall[j]), end=' ')
@@ -271,8 +287,10 @@ def default_args(**kwargs):
     parser.add_argument("--min-update-p", default=0.0, type=float)
     parser.add_argument("--max-ngram", default=2, type=int)
     parser.add_argument("--features", default=5000, type=int)
+    parser.add_argument("--max-included-literals", default=5000, type=int)
     parser.add_argument("--imdb-num-words", default=10000, type=int)
     parser.add_argument("--imdb-index-from", default=2, type=int)
+    parser.add_argument("--number-of-random-projections", default=0, type=int)
     parser.add_argument('--boost-true-positive-feedback', action='store_true')
     parser.add_argument('--match-count', action='store_true')
     args = parser.parse_args()
