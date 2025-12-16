@@ -12,7 +12,7 @@ name = "tmu"
 dynamic = ["version"]
 description = "Your project description"
 readme = "docs/long_description.rst"
-license.text = "MIT License"
+license = "MIT"
 authors = [
     { email = "ole.granmo@uia.no", name = "Ole-Christoffer Granmo" },
     { email = "per.andersen@uia.no", name = "Per-Arne Andersen" }
@@ -63,7 +63,7 @@ version = {attr = "tmu.__version__"}
 [tool.cffi_builder]
 module_name = "tmu.tmulib"
 flags = [
-    "-O3", "-mrdrnd"
+    "-O3"
 ]
 sources = [
     "tmu/lib/src/ClauseBank.c",
