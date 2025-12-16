@@ -47,6 +47,7 @@ class TMCoalescedClassifier(TMBaseModel, SingleClauseBankMixin, MultiWeightBankM
         weighted_clauses=False,
         clause_drop_p=0.0,
         literal_drop_p=0.0,
+        literal_drop_array = None,
         seed=None
     ):
         super().__init__(
@@ -68,6 +69,7 @@ class TMCoalescedClassifier(TMBaseModel, SingleClauseBankMixin, MultiWeightBankM
             weighted_clauses=weighted_clauses,
             clause_drop_p=clause_drop_p,
             literal_drop_p=literal_drop_p,
+            literal_drop_array=literal_drop_array,
             seed=seed
         )
         SingleClauseBankMixin.__init__(self)
@@ -229,7 +231,10 @@ class TMCoalescedClassifier(TMBaseModel, SingleClauseBankMixin, MultiWeightBankM
 
         # Literals are dropped based on literal drop probability
         self.literal_active = np.zeros(self.clause_bank.number_of_ta_chunks, dtype=np.uint32)
-        literal_active_integer = self.rng.rand(self.clause_bank.number_of_literals) >= self.literal_drop_p
+        if self.literal_drop_array is None:
+            literal_active_integer = self.rng.rand(self.clause_bank.number_of_literals) >= self.literal_drop_p
+        else:
+            literal_active_integer = np.concat((self.literal_drop_array, self.literal_drop_array))
         for k in range(self.clause_bank.number_of_literals):
             if literal_active_integer[k] == 1:
                 ta_chunk = k // 32
