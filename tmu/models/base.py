@@ -88,6 +88,7 @@ class TMBaseModel:
             weighted_clauses=False,
             clause_drop_p=0.0,
             literal_drop_p=0.0,
+            literal_drop_array=None,
             literal_sampling=1.0,
             feedback_rate_excluded_literals=1,
             literal_insertion_state=0,
@@ -132,6 +133,7 @@ class TMBaseModel:
         self.weighted_clauses = weighted_clauses
         self.clause_drop_p = clause_drop_p
         self.literal_drop_p = literal_drop_p
+        self.literal_drop_array = literal_drop_array
         self.batch_size = batch_size
         self.incremental = incremental
         self.type_ia_ii_feedback_ratio = type_ia_ii_feedback_ratio
